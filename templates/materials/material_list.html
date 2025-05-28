@@ -1,0 +1,690 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>原料管理システム - プロフェッショナル</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --primary-blue: #1e40af;
+            --primary-blue-light: #3b82f6;
+            --primary-blue-dark: #1e3a8a;
+            --secondary-blue: #e0f2fe;
+            --accent-blue: #0ea5e9;
+            --success-green: #059669;
+            --warning-orange: #d97706;
+            --text-dark: #1f2937;
+            --text-medium: #4b5563;
+            --text-light: #6b7280;
+            --border-light: #e5e7eb;
+            --bg-light: #f8fafc;
+            --bg-white: #ffffff;
+            --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+            --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background-color: var(--bg-light);
+            color: var(--text-dark);
+            line-height: 1.6;
+        }
+
+        /* ナビゲーション */
+        .navbar {
+            background-color: var(--primary-blue) !important;
+            box-shadow: var(--shadow-md);
+            padding: 1rem 0;
+        }
+
+        .navbar-brand {
+            font-weight: 700;
+            font-size: 1.25rem;
+            color: white !important;
+        }
+
+        .nav-link {
+            color: rgba(255, 255, 255, 0.9) !important;
+            font-weight: 500;
+            transition: all 0.2s ease;
+            border-radius: 6px;
+            padding: 0.5rem 1rem !important;
+            margin: 0 0.25rem;
+        }
+
+        .nav-link:hover {
+            color: white !important;
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+
+        /* カード */
+        .card {
+            border: 1px solid var(--border-light);
+            border-radius: 12px;
+            box-shadow: var(--shadow-sm);
+            background-color: var(--bg-white);
+            transition: all 0.2s ease;
+        }
+
+        .card:hover {
+            box-shadow: var(--shadow-md);
+            transform: translateY(-1px);
+        }
+
+        .card-header {
+            background-color: var(--bg-white);
+            border-bottom: 2px solid var(--secondary-blue);
+            font-weight: 600;
+            color: var(--primary-blue);
+            padding: 1rem 1.5rem;
+        }
+
+        /* 統計カード */
+        .stats-card {
+            border-left: 4px solid var(--primary-blue);
+            transition: all 0.2s ease;
+        }
+
+        .stats-card:hover {
+            border-left-color: var(--accent-blue);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .stats-number {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: var(--primary-blue);
+            line-height: 1;
+        }
+
+        .stats-label {
+            color: var(--text-medium);
+            font-weight: 500;
+            text-transform: uppercase;
+            font-size: 0.875rem;
+            letter-spacing: 0.025em;
+        }
+
+        .stats-icon {
+            font-size: 2.5rem;
+            color: var(--primary-blue-light);
+            opacity: 0.8;
+        }
+
+        /* フォーム */
+        .form-control, .form-select {
+            border: 2px solid var(--border-light);
+            border-radius: 8px;
+            padding: 0.75rem 1rem;
+            font-size: 0.95rem;
+            transition: all 0.2s ease;
+            background-color: var(--bg-white);
+        }
+
+        .form-control:focus, .form-select:focus {
+            border-color: var(--primary-blue-light);
+            box-shadow: 0 0 0 0.2rem rgba(59, 130, 246, 0.15);
+            background-color: var(--bg-white);
+        }
+
+        .form-label {
+            font-weight: 600;
+            color: var(--text-dark);
+            margin-bottom: 0.5rem;
+        }
+
+        .input-group-text {
+            background-color: var(--primary-blue);
+            border: 2px solid var(--primary-blue);
+            color: white;
+            font-weight: 600;
+        }
+
+        /* ボタン */
+        .btn {
+            font-weight: 600;
+            border-radius: 8px;
+            padding: 0.75rem 1.5rem;
+            transition: all 0.2s ease;
+            border: 2px solid transparent;
+        }
+
+        .btn-primary {
+            background-color: var(--primary-blue);
+            border-color: var(--primary-blue);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background-color: var(--primary-blue-dark);
+            border-color: var(--primary-blue-dark);
+            transform: translateY(-1px);
+            box-shadow: var(--shadow-md);
+        }
+
+        .btn-success {
+            background-color: var(--success-green);
+            border-color: var(--success-green);
+        }
+
+        .btn-success:hover {
+            background-color: #047857;
+            border-color: #047857;
+            transform: translateY(-1px);
+        }
+
+        .btn-outline-secondary {
+            border-color: var(--text-medium);
+            color: var(--text-medium);
+        }
+
+        .btn-outline-secondary:hover {
+            background-color: var(--text-medium);
+            border-color: var(--text-medium);
+        }
+
+        /* テーブル */
+        .table {
+            background-color: var(--bg-white);
+            border-radius: 12px;
+            overflow: hidden;
+        }
+
+        .table thead th {
+            background-color: var(--primary-blue);
+            color: white;
+            font-weight: 600;
+            border: none;
+            padding: 1rem;
+            text-transform: uppercase;
+            font-size: 0.875rem;
+            letter-spacing: 0.025em;
+        }
+
+        .table tbody td {
+            padding: 1rem;
+            border-color: var(--border-light);
+            vertical-align: middle;
+        }
+
+        .table tbody tr {
+            transition: all 0.15s ease;
+        }
+
+        .table tbody tr:hover {
+            background-color: var(--secondary-blue);
+        }
+
+        /* バッジ */
+        .badge {
+            font-weight: 600;
+            padding: 0.5rem 0.75rem;
+            border-radius: 6px;
+            font-size: 0.8rem;
+        }
+
+        .badge.bg-primary {
+            background-color: var(--primary-blue) !important;
+        }
+
+        .badge.bg-success {
+            background-color: var(--success-green) !important;
+        }
+
+        .badge.bg-warning {
+            background-color: var(--warning-orange) !important;
+        }
+
+        .badge.bg-secondary {
+            background-color: var(--text-medium) !important;
+        }
+
+        /* アラート */
+        .alert {
+            border-radius: 8px;
+            border: none;
+            font-weight: 500;
+        }
+
+        .alert-success {
+            background-color: #d1fae5;
+            color: #065f46;
+            border-left: 4px solid var(--success-green);
+        }
+
+        .alert-info {
+            background-color: var(--secondary-blue);
+            color: var(--primary-blue-dark);
+            border-left: 4px solid var(--primary-blue);
+        }
+
+        .alert-warning {
+            background-color: #fef3c7;
+            color: #92400e;
+            border-left: 4px solid var(--warning-orange);
+        }
+
+        /* ページネーション */
+        .pagination .page-link {
+            color: var(--primary-blue);
+            border: 1px solid var(--border-light);
+            margin: 0 2px;
+            border-radius: 6px;
+            font-weight: 500;
+        }
+
+        .pagination .page-link:hover {
+            background-color: var(--secondary-blue);
+            border-color: var(--primary-blue-light);
+            color: var(--primary-blue-dark);
+        }
+
+        .pagination .page-item.active .page-link {
+            background-color: var(--primary-blue);
+            border-color: var(--primary-blue);
+        }
+
+        /* 検索ハイライト */
+        .search-highlight {
+            background-color: #fef08a;
+            padding: 0.125rem 0.25rem;
+            border-radius: 4px;
+            font-weight: 600;
+        }
+
+        /* レスポンシブ */
+        @media (max-width: 768px) {
+            .stats-card {
+                margin-bottom: 1rem;
+            }
+
+            .card {
+                margin-bottom: 1rem;
+            }
+        }
+
+        /* アニメーション */
+        .fade-in {
+            animation: fadeIn 0.4s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* 特別なスタイル */
+        .section-title {
+            color: var(--primary-blue);
+            font-weight: 700;
+            margin-bottom: 1.5rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 3px solid var(--secondary-blue);
+        }
+
+        .feature-icon {
+            width: 48px;
+            height: 48px;
+            background-color: var(--secondary-blue);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 1rem;
+        }
+
+        .feature-icon i {
+            color: var(--primary-blue);
+            font-size: 1.5rem;
+        }
+    </style>
+</head>
+<body>
+    <!-- ナビゲーションバー -->
+    <nav class="navbar navbar-expand-lg navbar-dark">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="/">
+                <i class="fas fa-industry me-2"></i>統合管理システム
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="/dashboard/">
+                            <i class="fas fa-tachometer-alt me-1"></i>ダッシュボード
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link active" href="/">
+                            <i class="fas fa-flask me-1"></i>原料管理
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#" onclick="showComingSoon('製品管理')">
+                            <i class="fas fa-boxes me-1"></i>製品管理
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#" onclick="showComingSoon('資材管理')">
+                            <i class="fas fa-tools me-1"></i>資材管理
+                        </a>
+                    </li>
+                </ul>
+                <ul class="navbar-nav">
+                    <li class="nav-item">
+                        <a class="nav-link" href="/admin/">
+                            <i class="fas fa-cog me-1"></i>システム管理
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid mt-4 fade-in">
+        <!-- ページヘッダー -->
+        <div class="row mb-4">
+            <div class="col">
+                <h1 class="section-title">
+                    <i class="fas fa-flask me-2"></i>原料管理システム
+                </h1>
+            </div>
+        </div>
+
+        <!-- 統計ダッシュボード -->
+        <div class="row mb-4">
+            <div class="col-lg-3 col-md-6 mb-3">
+                <div class="card stats-card">
+                    <div class="card-body">
+                        <div class="row align-items-center">
+                            <div class="col">
+                                <div class="stats-number">621</div>
+                                <div class="stats-label">総原料数</div>
+                            </div>
+                            <div class="col-auto">
+                                <i class="fas fa-flask stats-icon"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-3 col-md-6 mb-3">
+                <div class="card stats-card">
+                    <div class="card-body">
+                        <div class="row align-items-center">
+                            <div class="col">
+                                <div class="stats-number">621</div>
+                                <div class="stats-label">表示中</div>
+                            </div>
+                            <div class="col-auto">
+                                <i class="fas fa-eye stats-icon"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-3 col-md-6 mb-3">
+                <div class="card stats-card">
+                    <div class="card-body">
+                        <div class="row align-items-center">
+                            <div class="col">
+                                <div class="stats-number">5</div>
+                                <div class="stats-label">CSVファイル</div>
+                            </div>
+                            <div class="col-auto">
+                                <i class="fas fa-file-csv stats-icon"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-3 col-md-6 mb-3">
+                <div class="card stats-card">
+                    <div class="card-body">
+                        <div class="row align-items-center">
+                            <div class="col">
+                                <div class="stats-number">Active</div>
+                                <div class="stats-label">システム状態</div>
+                            </div>
+                            <div class="col-auto">
+                                <i class="fas fa-check-circle stats-icon text-success"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- CSV読み込み機能 -->
+        <div class="row mb-4">
+            <div class="col">
+                <div class="card">
+                    <div class="card-header">
+                        <i class="fas fa-upload me-2"></i>データ管理
+                    </div>
+                    <div class="card-body">
+                        <div class="row align-items-center">
+                            <div class="col-md-8">
+                                <h6 class="mb-1">CSVデータ読み込み</h6>
+                                <p class="text-muted mb-0">原料マスタ詳細.csv からデータベースに原料情報を読み込みます</p>
+                            </div>
+                            <div class="col-md-4 text-end">
+                                <button type="button" class="btn btn-success me-2">
+                                    <i class="fas fa-download me-1"></i>CSV読み込み
+                                </button>
+                                <button type="button" class="btn btn-outline-secondary">
+                                    <i class="fas fa-sync me-1"></i>更新
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 検索・フィルタ -->
+        <div class="row mb-4">
+            <div class="col">
+                <div class="card">
+                    <div class="card-header">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span><i class="fas fa-search me-2"></i>検索・フィルタ</span>
+                            <button class="btn btn-outline-secondary btn-sm">
+                                <i class="fas fa-times me-1"></i>クリア
+                            </button>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <form>
+                            <div class="row g-3">
+                                <div class="col-md-4">
+                                    <label class="form-label">キーワード検索</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text">
+                                            <i class="fas fa-search"></i>
+                                        </span>
+                                        <input type="text" class="form-control" placeholder="原料名・ID・供給元">
+                                    </div>
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label">原料区分</label>
+                                    <select class="form-select">
+                                        <option>すべて</option>
+                                        <option>Standard (621件)</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label">最低価格</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text">¥</span>
+                                        <input type="number" class="form-control" placeholder="0">
+                                    </div>
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label">最高価格</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text">¥</span>
+                                        <input type="number" class="form-control" placeholder="999999">
+                                    </div>
+                                </div>
+                                <div class="col-md-2 d-flex align-items-end">
+                                    <button type="submit" class="btn btn-primary w-100">
+                                        <i class="fas fa-search me-1"></i>検索
+                                    </button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+<!-- 原料データテーブル -->
+        <div class="row">
+            <div class="col">
+                <div class="card">
+                    <div class="card-header">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span><i class="fas fa-table me-2"></i>原料一覧 <span class="badge bg-primary">{{ total_count }}件</span></span>
+                            <div>
+                                <form method="get" style="display: inline;">
+                                    <!-- 既存の検索パラメータを保持 -->
+                                    {% if search_query %}<input type="hidden" name="search" value="{{ search_query }}">{% endif %}
+                                    {% if category_filter %}<input type="hidden" name="category" value="{{ category_filter }}">{% endif %}
+                                    {% if price_min %}<input type="hidden" name="price_min" value="{{ price_min }}">{% endif %}
+                                    {% if price_max %}<input type="hidden" name="price_max" value="{{ price_max }}">{% endif %}
+                                    {% if sort_by %}<input type="hidden" name="sort" value="{{ sort_by }}">{% endif %}
+                                    {% if sort_order %}<input type="hidden" name="order" value="{{ sort_order }}">{% endif %}
+
+                                    <select class="form-select form-select-sm" name="per_page" onchange="this.form.submit()" style="width: auto; display: inline-block;">
+                                        <option value="25" {% if per_page == 25 %}selected{% endif %}>25件表示</option>
+                                        <option value="50" {% if per_page == 50 %}selected{% endif %}>50件表示</option>
+                                        <option value="100" {% if per_page == 100 %}selected{% endif %}>100件表示</option>
+                                        <option value="500" {% if per_page == 500 %}selected{% endif %}>500件表示</option>
+                                    </select>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-hover mb-0" style="font-size: 0.9rem;">
+                                <thead>
+                                    <tr>
+                                        <th style="width: 80px;"><i class="fas fa-hashtag me-1"></i>ID</th>
+                                        <th style="width: 35%;"><i class="fas fa-flask me-1"></i>原料名</th>
+                                        <th style="width: 100px;"><i class="fas fa-yen-sign me-1"></i>単価</th>
+                                        <th style="width: 120px;"><i class="fas fa-tag me-1"></i>区分</th>
+                                        <th style="width: 150px;"><i class="fas fa-building me-1"></i>供給元</th>
+                                        <th style="width: 120px;"><i class="fas fa-clock me-1"></i>更新日</th>
+                                        <th style="width: 80px;"><i class="fas fa-eye me-1"></i>詳細</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for material in page_obj %}
+                                    <tr>
+                                        <td><strong>{{ material.material_id }}</strong></td>
+                                        <td>
+                                            <a href="{% url 'materials:material_detail' material.material_id %}"
+                                               class="text-decoration-none fw-bold text-primary"
+                                               style="cursor: pointer;">
+                                                {{ material.material_name|truncatechars:50 }}
+                                            </a>
+                                        </td>
+                                        <td>
+                                            {% if material.unit_price > 0 %}
+                                            <span class="badge bg-success">¥{{ material.unit_price|floatformat:0 }}</span>
+                                            {% else %}
+                                            <span class="text-muted">-</span>
+                                            {% endif %}
+                                        </td>
+                                        <td><span class="badge bg-secondary">{{ material.material_category|truncatechars:15 }}</span></td>
+                                        <td class="text-muted" style="font-size: 0.85rem;">{{ material.supplier|default:"-"|truncatechars:20 }}</td>
+                                        <td class="text-muted" style="font-size: 0.8rem;">{{ material.updated_at|date:"m/d H:i" }}</td>
+                                        <td>
+                                            <a href="{% url 'materials:material_detail' material.material_id %}"
+                                               class="btn btn-outline-primary btn-sm">
+                                                <i class="fas fa-eye"></i>
+                                            </a>
+                                        </td>
+                                    </tr>
+                                    {% empty %}
+                                    <tr>
+                                        <td colspan="7" class="text-center py-4">
+                                            <i class="fas fa-inbox text-muted fa-2x mb-2"></i>
+                                            <br>
+                                            <span class="text-muted">条件に一致する原料が見つかりません</span>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ページネーション（修正版） -->
+        {% if page_obj.has_other_pages %}
+        <div class="row mt-4">
+            <div class="col">
+                <nav>
+                    <ul class="pagination justify-content-center">
+                        {% if page_obj.has_previous %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page=1{% if search_query %}&search={{ search_query|urlencode }}{% endif %}{% if category_filter %}&category={{ category_filter|urlencode }}{% endif %}{% if price_min %}&price_min={{ price_min }}{% endif %}{% if price_max %}&price_max={{ price_max }}{% endif %}{% if sort_by %}&sort={{ sort_by }}{% endif %}{% if sort_order %}&order={{ sort_order }}{% endif %}{% if per_page %}&per_page={{ per_page }}{% endif %}">
+                                <i class="fas fa-angle-double-left"></i>
+                            </a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if search_query %}&search={{ search_query|urlencode }}{% endif %}{% if category_filter %}&category={{ category_filter|urlencode }}{% endif %}{% if price_min %}&price_min={{ price_min }}{% endif %}{% if price_max %}&price_max={{ price_max }}{% endif %}{% if sort_by %}&sort={{ sort_by }}{% endif %}{% if sort_order %}&order={{ sort_order }}{% endif %}{% if per_page %}&per_page={{ per_page }}{% endif %}">
+                                <i class="fas fa-angle-left"></i>
+                            </a>
+                        </li>
+                        {% endif %}
+
+                        <li class="page-item active">
+                            <span class="page-link">{{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span>
+                        </li>
+
+                        {% if page_obj.has_next %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if search_query %}&search={{ search_query|urlencode }}{% endif %}{% if category_filter %}&category={{ category_filter|urlencode }}{% endif %}{% if price_min %}&price_min={{ price_min }}{% endif %}{% if price_max %}&price_max={{ price_max }}{% endif %}{% if sort_by %}&sort={{ sort_by }}{% endif %}{% if sort_order %}&order={{ sort_order }}{% endif %}{% if per_page %}&per_page={{ per_page }}{% endif %}">
+                                <i class="fas fa-angle-right"></i>
+                            </a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if search_query %}&search={{ search_query|urlencode }}{% endif %}{% if category_filter %}&category={{ category_filter|urlencode }}{% endif %}{% if price_min %}&price_min={{ price_min }}{% endif %}{% if price_max %}&price_max={{ price_max }}{% endif %}{% if sort_by %}&sort={{ sort_by }}{% endif %}{% if sort_order %}&order={{ sort_order }}{% endif %}{% if per_page %}&per_page={{ per_page }}{% endif %}">
+                                <i class="fas fa-angle-double-right"></i>
+                            </a>
+                        </li>
+                        {% endif %}
+                    </ul>
+                </nav>
+            </div>
+        </div>
+        {% endif %}
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        function showComingSoon(feature) {
+            alert(`${feature}機能は準備中です。\n近日中にリリース予定です。`);
+        }
+    </script>
+</body>
+</html>

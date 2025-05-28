@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ material.material_name }} - 原料詳細</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --primary-blue: #1e40af;
+            --primary-blue-light: #3b82f6;
+            --secondary-blue: #e0f2fe;
+            --success-green: #059669;
+            --text-dark: #1f2937;
+            --text-medium: #4b5563;
+            --border-light: #e5e7eb;
+            --bg-light: #f8fafc;
+            --bg-white: #ffffff;
+            --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+            --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background-color: var(--bg-light);
+            color: var(--text-dark);
+            line-height: 1.6;
+        }
+
+        .navbar {
+            background-color: var(--primary-blue) !important;
+            box-shadow: var(--shadow-md);
+            padding: 1rem 0;
+        }
+
+        .navbar-brand {
+            font-weight: 700;
+            font-size: 1.25rem;
+            color: white !important;
+        }
+
+        .nav-link {
+            color: rgba(255, 255, 255, 0.9) !important;
+            font-weight: 500;
+            transition: all 0.2s ease;
+            border-radius: 6px;
+            padding: 0.5rem 1rem !important;
+            margin: 0 0.25rem;
+        }
+
+        .nav-link:hover {
+            color: white !important;
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+
+        .card {
+            border: 1px solid var(--border-light);
+            border-radius: 12px;
+            box-shadow: var(--shadow-sm);
+            background-color: var(--bg-white);
+            transition: all 0.2s ease;
+        }
+
+        .card-header {
+            background-color: var(--bg-white);
+            border-bottom: 2px solid var(--secondary-blue);
+            font-weight: 600;
+            color: var(--primary-blue);
+            padding: 1rem 1.5rem;
+        }
+
+        .badge {
+            font-weight: 600;
+            padding: 0.5rem 0.75rem;
+            border-radius: 6px;
+            font-size: 0.8rem;
+        }
+
+        .badge.bg-primary {
+            background-color: var(--primary-blue) !important;
+        }
+
+        .badge.bg-success {
+            background-color: var(--success-green) !important;
+        }
+
+        .btn {
+            font-weight: 600;
+            border-radius: 8px;
+            padding: 0.75rem 1.5rem;
+            transition: all 0.2s ease;
+        }
+
+        .btn-primary {
+            background-color: var(--primary-blue);
+            border-color: var(--primary-blue);
+        }
+
+        .btn-outline-secondary {
+            border-color: var(--text-medium);
+            color: var(--text-medium);
+        }
+
+        .section-title {
+            color: var(--primary-blue);
+            font-weight: 700;
+            margin-bottom: 1.5rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 3px solid var(--secondary-blue);
+        }
+
+        .info-item {
+            padding: 0.75rem 0;
+            border-bottom: 1px solid var(--border-light);
+        }
+
+        .info-item:last-child {
+            border-bottom: none;
+        }
+
+        .info-label {
+            font-weight: 600;
+            color: var(--text-medium);
+            width: 120px;
+            display: inline-block;
+        }
+
+        .info-value {
+            color: var(--text-dark);
+        }
+
+        .related-item {
+            padding: 0.75rem;
+            border: 1px solid var(--border-light);
+            border-radius: 8px;
+            margin-bottom: 0.5rem;
+            transition: all 0.2s ease;
+        }
+
+        .related-item:hover {
+            background-color: var(--secondary-blue);
+            border-color: var(--primary-blue-light);
+        }
+    </style>
+</head>
+<body>
+    <!-- ナビゲーションバー -->
+    <nav class="navbar navbar-expand-lg navbar-dark">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="/">
+                <i class="fas fa-industry me-2"></i>統合管理システム
+            </a>
+            <div class="navbar-nav ms-auto">
+                <a class="nav-link" href="/dashboard/">
+                    <i class="fas fa-tachometer-alt me-1"></i>ダッシュボード
+                </a>
+                <a class="nav-link" href="/">
+                    <i class="fas fa-flask me-1"></i>原料管理
+                </a>
+                <a class="nav-link" href="/admin/">
+                    <i class="fas fa-cog me-1"></i>システム管理
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid mt-4">
+        <!-- パンくずリスト -->
+        <nav aria-label="breadcrumb" class="mb-4">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="/dashboard/">ダッシュボード</a></li>
+                <li class="breadcrumb-item"><a href="/">原料管理</a></li>
+                <li class="breadcrumb-item active">{{ material.material_name }}</li>
+            </ol>
+        </nav>
+
+        <div class="row">
+            <!-- メイン情報 -->
+            <div class="col-lg-8 mb-4">
+                <div class="card">
+                    <div class="card-header">
+                        <h4 class="mb-0">
+                            <i class="fas fa-flask me-2"></i>{{ material.material_name }}
+                            <span class="badge bg-primary ms-2">ID: {{ material.material_id }}</span>
+                        </h4>
+                    </div>
+                    <div class="card-body">
+                        <div class="info-item">
+                            <span class="info-label">原料ID:</span>
+                            <span class="info-value"><strong>{{ material.material_id }}</strong></span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">原料名:</span>
+                            <span class="info-value">{{ material.material_name }}</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">単価:</span>
+                            <span class="info-value">
+                                {% if material.unit_price > 0 %}
+                                <span class="badge bg-success">¥{{ material.unit_price|floatformat:0 }}</span>
+                                {% else %}
+                                <span class="text-muted">価格未設定</span>
+                                {% endif %}
+                            </span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">原料区分:</span>
+                            <span class="info-value">
+                                <span class="badge bg-secondary">{{ material.material_category }}</span>
+                            </span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">供給元:</span>
+                            <span class="info-value">{{ material.supplier|default:"未設定" }}</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">ステータス:</span>
+                            <span class="info-value">
+                                {% if material.is_active %}
+                                <span class="badge bg-success">有効</span>
+                                {% else %}
+                                <span class="badge bg-secondary">無効</span>
+                                {% endif %}
+                            </span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">作成日:</span>
+                            <span class="info-value">{{ material.created_at|date:"Y年m月d日 H:i" }}</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">更新日:</span>
+                            <span class="info-value">{{ material.updated_at|date:"Y年m月d日 H:i" }}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- サイドバー -->
+            <div class="col-lg-4">
+                <!-- アクション -->
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <i class="fas fa-cogs me-2"></i>操作
+                    </div>
+                    <div class="card-body">
+                        <a href="/" class="btn btn-outline-secondary w-100 mb-2">
+                            <i class="fas fa-arrow-left me-1"></i>原料一覧に戻る
+                        </a>
+                        <button class="btn btn-primary w-100 mb-2" onclick="window.print()">
+                            <i class="fas fa-print me-1"></i>印刷
+                        </button>
+                        <button class="btn btn-outline-primary w-100" onclick="copyToClipboard()">
+                            <i class="fas fa-copy me-1"></i>情報をコピー
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 関連原料 -->
+                {% if related_materials %}
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <i class="fas fa-tags me-2"></i>同じ区分の原料
+                    </div>
+                    <div class="card-body">
+                        {% for related in related_materials %}
+                        <div class="related-item">
+                            <a href="{% url 'materials:material_detail' related.material_id %}" class="text-decoration-none">
+                                <div class="fw-bold">{{ related.material_name }}</div>
+                                <small class="text-muted">ID: {{ related.material_id }}</small>
+                                {% if related.unit_price > 0 %}
+                                <div class="mt-1">
+                                    <span class="badge bg-success">¥{{ related.unit_price|floatformat:0 }}</span>
+                                </div>
+                                {% endif %}
+                            </a>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- 価格帯の近い原料 -->
+                {% if price_range_materials %}
+                <div class="card">
+                    <div class="card-header">
+                        <i class="fas fa-yen-sign me-2"></i>価格帯の近い原料
+                    </div>
+                    <div class="card-body">
+                        {% for similar in price_range_materials %}
+                        <div class="related-item">
+                            <a href="{% url 'materials:material_detail' similar.material_id %}" class="text-decoration-none">
+                                <div class="fw-bold">{{ similar.material_name }}</div>
+                                <small class="text-muted">ID: {{ similar.material_id }}</small>
+                                {% if similar.unit_price > 0 %}
+                                <div class="mt-1">
+                                    <span class="badge bg-success">¥{{ similar.unit_price|floatformat:0 }}</span>
+                                </div>
+                                {% endif %}
+                            </a>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        function copyToClipboard() {
+            const text = `原料情報
+原料ID: {{ material.material_id }}
+原料名: {{ material.material_name }}
+単価: ¥{{ material.unit_price|floatformat:0 }}
+区分: {{ material.material_category }}
+供給元: {{ material.supplier|default:"未設定" }}`;
+
+            navigator.clipboard.writeText(text).then(function() {
+                alert('原料情報をクリップボードにコピーしました');
+            });
+        }
+    </script>
+</body>
+</html>
