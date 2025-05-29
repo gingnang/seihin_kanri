@@ -11,6 +11,7 @@ from django.db import transaction
 
 logger = logging.getLogger(__name__)
 
+
 class MaterialCSVLoader:
     def __init__(self):
         self.data_dir = os.path.join(settings.BASE_DIR, 'data')
@@ -36,7 +37,6 @@ class MaterialCSVLoader:
         return [os.path.join(self.data_dir, f) for f in os.listdir(self.data_dir) if f.endswith('.csv')]
 
     def create_column_mapping(self, columns):
-        # ラベル用備考だけ手動でマッピング
         mapping = {}
         for col in columns:
             if col == '原料ID':
@@ -57,9 +57,44 @@ class MaterialCSVLoader:
                 mapping['label_note'] = col
             if col == '原料区分':
                 mapping['material_category'] = col
+            if col == '荷姿':
+                mapping['packaging'] = col
+            if col == '品質管理備考':
+                mapping['qc_note'] = col
+            if col == '使用剤形':
+                mapping['usage_form'] = col
+            if col == '規格':
+                mapping['standard'] = col
         return mapping
 
+    def clean_and_convert_value(self, value, field_name=''):
+        """値のクリーニングと変換"""
+        if pd.isna(value) or value == '':
+            return ''
+
+        value_str = str(value).strip()
+
+        # 数値フィールドの処理
+        if field_name in ['unit_price', 'main_bag_weight']:
+            cleaned = re.sub(r'[,¥\s]', '', value_str)
+            return cleaned if cleaned else '0'
+
+        return value_str
+
     def load_materials(self):
+        """従来のload_materials（互換性維持）"""
+        return self.load_materials_with_overwrite('update')
+
+    def load_materials_with_overwrite(self, overwrite_mode='update'):
+        """
+        上書きモード対応のCSV読み込み
+
+        Args:
+            overwrite_mode (str):
+                'update' - 既存データを更新（推奨）
+                'replace' - 既存データを削除して新規作成
+                'skip' - 既存データをスキップ
+        """
         try:
             csv_files = self.find_csv_files()
             if not csv_files:
@@ -77,38 +112,70 @@ class MaterialCSVLoader:
                     break
                 except Exception:
                     continue
+
             if df is None:
                 return {'success': False, 'error': 'CSVファイルを読み込めません'}
 
             df = df.fillna('')
             mapping = self.create_column_mapping(df.columns)
 
+            if 'material_id' not in mapping:
+                return {'success': False, 'error': '原料ID列が見つかりません'}
+
             created = 0
             updated = 0
             skipped = 0
+            errors = []
 
             with transaction.atomic():
                 for idx, row in df.iterrows():
                     try:
-                        material_id = row[mapping['material_id']]
+                        material_id = self.clean_and_convert_value(row[mapping['material_id']], 'material_id')
+
+                        if not material_id:
+                            skipped += 1
+                            continue
+
                         values = {}
                         for field, col in mapping.items():
-                            values[field] = row[col]
-                        material, was_created = Material.objects.get_or_create(
-                            material_id=material_id,
-                            defaults=values
-                        )
-                        if was_created:
+                            if field != 'material_id':
+                                values[field] = self.clean_and_convert_value(row[col], field)
+
+                        # 上書きモード処理
+                        if overwrite_mode == 'update':
+                            # 既存データを更新、なければ新規作成
+                            material, was_created = Material.objects.update_or_create(
+                                material_id=material_id,
+                                defaults=values
+                            )
+                            if was_created:
+                                created += 1
+                            else:
+                                updated += 1
+
+                        elif overwrite_mode == 'replace':
+                            # 既存データを削除してから新規作成
+                            Material.objects.filter(material_id=material_id).delete()
+                            values['material_id'] = material_id
+                            Material.objects.create(**values)
                             created += 1
-                        else:
-                            for k, v in values.items():
-                                setattr(material, k, v)
-                            material.save()
-                            updated += 1
+
+                        elif overwrite_mode == 'skip':
+                            # 既存データがあればスキップ
+                            if Material.objects.filter(material_id=material_id).exists():
+                                skipped += 1
+                            else:
+                                values['material_id'] = material_id
+                                Material.objects.create(**values)
+                                created += 1
+
                     except Exception as e:
-                        print(f"行{idx+1}エラー: {e}")
+                        errors.append(f"行{idx + 1}: {str(e)}")
                         skipped += 1
                         continue
+
+            # 全データを有効化
+            Material.objects.all().update(is_active=True)
 
             return {
                 'success': True,
@@ -117,8 +184,48 @@ class MaterialCSVLoader:
                 'skipped': skipped,
                 'total_rows': len(df),
                 'encoding_used': used_encoding,
-                'columns': list(df.columns)
+                'columns': list(df.columns),
+                'overwrite_mode': overwrite_mode,
+                'errors': errors[:5] if errors else []
             }
+
+        except Exception as e:
+            return {'success': False, 'error': str(e)}
+
+    def analyze_csv_structure(self):
+        """CSV構造分析（既存メソッド）"""
+        try:
+            csv_files = self.find_csv_files()
+            if not csv_files:
+                return {'success': False, 'error': 'CSVファイルが見つかりません'}
+
+            file_path = csv_files[0]
+            encodings = self.detect_encoding_comprehensive(file_path)
+
+            for encoding in encodings:
+                try:
+                    df = pd.read_csv(file_path, encoding=encoding, nrows=5)
+
+                    # 重複チェック
+                    duplicates = 0
+                    unique_ids = 0
+                    if '原料ID' in df.columns:
+                        duplicates = df['原料ID'].duplicated().sum()
+                        unique_ids = df['原料ID'].nunique()
+
+                    return {
+                        'success': True,
+                        'encoding': encoding,
+                        'total_rows': len(df),
+                        'columns': list(df.columns),
+                        'duplicates_in_sample': duplicates,
+                        'unique_ids_in_sample': unique_ids,
+                        'recommended_mapping': self.create_column_mapping(df.columns)
+                    }
+                except Exception:
+                    continue
+
+            return {'success': False, 'error': '読み込み可能なエンコーディングが見つかりません'}
 
         except Exception as e:
             return {'success': False, 'error': str(e)}
