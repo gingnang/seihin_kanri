@@ -1,66 +1,45 @@
 from django.db import models
-from decimal import Decimal
 
 
 class Material(models.Model):
-    """原料マスタモデル"""
-    material_id = models.CharField(max_length=50, unique=True, verbose_name="原料ID")
-    material_name = models.CharField(max_length=200, verbose_name="原料名")
-    manufacturer = models.CharField(max_length=200, blank=True, verbose_name="メーカー")
-    supplier = models.CharField(max_length=200, blank=True, verbose_name="発注先")
-    application = models.CharField(max_length=200, blank=True, verbose_name="適用")
-    unit_price = models.DecimalField(max_digits=10, decimal_places=2, default=0, verbose_name="単価")
-    order_quantity = models.DecimalField(max_digits=10, decimal_places=3, default=0, verbose_name="発注量")
-    remarks = models.TextField(blank=True, verbose_name="備考")
-
-    # 既存フィールド（管理用）
-    material_category = models.CharField(max_length=100, blank=True, verbose_name="原料区分")
-    is_active = models.BooleanField(default=True, verbose_name="有効")
-    created_at = models.DateTimeField(auto_now_add=True, verbose_name="作成日時")
-    updated_at = models.DateTimeField(auto_now=True, verbose_name="更新日時")
-
-    class Meta:
-        verbose_name = "原料"
-        verbose_name_plural = "原料"
-        ordering = ['material_id']
-
-    def __str__(self):
-        return f"{self.material_id} - {self.material_name}"
-
-
-class Product(models.Model):
-    """製品マスタモデル"""
-    product_id = models.CharField(max_length=50, unique=True, verbose_name="製品ID")
-    product_name = models.CharField(max_length=200, verbose_name="製品名")
-    factory = models.CharField(max_length=100, verbose_name="工場")
-    sales_destination = models.CharField(max_length=200, blank=True, verbose_name="販売先")
-    filling_price = models.DecimalField(max_digits=10, decimal_places=2, default=0, verbose_name="充填価格")
-    batch_amount = models.DecimalField(max_digits=10, decimal_places=3, default=0, verbose_name="仕込量")
-    output_amount = models.DecimalField(max_digits=10, decimal_places=3, default=0, verbose_name="出来数")
-    is_active = models.BooleanField(default=True, verbose_name="有効")
-
-    class Meta:
-        verbose_name = "製品"
-        verbose_name_plural = "製品"
-        ordering = ['product_id']
+    label_note = models.CharField('ラベル用備考', max_length=255, blank=True, null=True)
+    label_issue_count = models.CharField('ラベル発行枚数', max_length=100, blank=True, null=True)
+    retest_extension_expiry = models.CharField('リテスト延長使用期限', max_length=100, blank=True, null=True)
+    retest_days = models.CharField('リテスト試験日数', max_length=100, blank=True, null=True)
+    usage_form = models.CharField('使用剤形', max_length=100, blank=True, null=True)
+    expiry_display = models.CharField('使用期限表示', max_length=100, blank=True, null=True)
+    guarantee_period = models.CharField('保障期間', max_length=100, blank=True, null=True)
+    tolerance_usage = models.CharField('公差使用', max_length=100, blank=True, null=True)
+    category = models.CharField('分類', max_length=100, blank=True, null=True)
+    unit_price = models.CharField('単価', max_length=100, blank=True, null=True)
+    material_id = models.CharField('原料ID', max_length=100, unique=True)
+    material_code = models.CharField('原料コード', max_length=100, blank=True, null=True)
+    material_category = models.CharField('原料区分', max_length=100, blank=True, null=True)
+    material_name = models.CharField('原料名', max_length=100, blank=True, null=True)
+    material_sub_code = models.CharField('原料簿コード（サブ）', max_length=100, blank=True, null=True)
+    material_main_code = models.CharField('原料簿コード（メイン）', max_length=100, blank=True, null=True)
+    origin_country = models.CharField('原産国表示', max_length=100, blank=True, null=True)
+    post_test_expiry = models.CharField('受入試験後使用期限', max_length=100, blank=True, null=True)
+    qc_note = models.CharField('品質管理備考', max_length=255, blank=True, null=True)
+    product_name = models.CharField('商品名', max_length=100, blank=True, null=True)
+    product_kana = models.CharField('商品名カナ', max_length=100, blank=True, null=True)
+    stock_unit_coefficient = models.CharField('在庫単位（係数）', max_length=100, blank=True, null=True)
+    change_request = models.CharField('変更申請／変更指示', max_length=100, blank=True, null=True)
+    diff_warn_rate = models.CharField('差分警告割合', max_length=100, blank=True, null=True)
+    main_bag_weighing = models.CharField('正袋秤量', max_length=100, blank=True, null=True)
+    main_bag_weight = models.CharField('正袋重量', max_length=100, blank=True, null=True)
+    hq_note = models.CharField('生産本部備考', max_length=255, blank=True, null=True)
+    image_path = models.CharField('画像パス', max_length=255, blank=True, null=True)
+    order_unit = models.CharField('発注単位', max_length=100, blank=True, null=True)
+    packaging = models.CharField('荷姿', max_length=100, blank=True, null=True)
+    correction_info = models.CharField('補正情報', max_length=100, blank=True, null=True)
+    manufacturer = models.CharField('製造所', max_length=100, blank=True, null=True)
+    standard = models.CharField('規格', max_length=100, blank=True, null=True)
+    procurement_type = models.CharField('調達区分', max_length=100, blank=True, null=True)
+    supplier = models.CharField('販売者', max_length=100, blank=True, null=True)
+    tare_weight = models.CharField('風袋重量', max_length=100, blank=True, null=True)
+    unnamed_36 = models.CharField('Unnamed: 36', max_length=100, blank=True, null=True)
+    unnamed_37 = models.CharField('Unnamed: 37', max_length=100, blank=True, null=True)
 
     def __str__(self):
-        return f"{self.product_id} - {self.product_name}"
-
-
-class Recipe(models.Model):
-    """配合詳細モデル"""
-    product = models.ForeignKey(Product, on_delete=models.CASCADE, verbose_name="製品")
-    material = models.ForeignKey(Material, on_delete=models.CASCADE, verbose_name="原料")
-    pattern = models.IntegerField(verbose_name="パターン")
-    blend_amount_kg = models.DecimalField(max_digits=10, decimal_places=3, verbose_name="配合量(kg)")
-    correction_category = models.CharField(max_length=50, blank=True, verbose_name="補正区分")
-    remarks = models.TextField(blank=True, verbose_name="備考")
-
-    class Meta:
-        verbose_name = "配合詳細"
-        verbose_name_plural = "配合詳細"
-        unique_together = ('product', 'material', 'pattern')
-
-    def __str__(self):
-        return f"{self.product.product_id} - {self.material.material_name} (パターン{self.pattern})"
+        return self.material_name or self.material_id

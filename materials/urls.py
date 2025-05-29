@@ -5,6 +5,8 @@ from django.contrib import admin
 from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
+from django.urls import path
+from . import views
 
 app_name = 'materials'
 
@@ -14,7 +16,6 @@ urlpatterns = [
     path('load-csv/', views.load_csv_data, name='load_csv_data'),
     path('analyze-csv/', views.analyze_csv_structure, name='analyze_csv_structure'),
     path('detail/<int:pk>/', views.material_detail, name='material_detail'),
-    # path('debug/', views.debug_data, name='debug_data'),  # ← この行は削除またはコメントアウト
 ]
 
 # 開発環境でのメディアファイル配信

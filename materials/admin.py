@@ -3,10 +3,23 @@ from django.shortcuts import render, redirect
 from django.urls import path
 from django.contrib import messages
 from django.http import HttpResponse
-from .models import Material, Product, Recipe
+from .models import Material
 from .csv_loader import MaterialCSVLoader
 import io
 import csv
+
+
+from django.contrib import admin
+from .models import Material
+
+@admin.register(Material)
+class MaterialAdmin(admin.ModelAdmin):
+    list_display = (
+        'material_id', 'material_name', 'manufacturer', 'supplier', 'unit_price', 'procurement_type'
+    )
+    search_fields = ('material_id', 'material_name', 'manufacturer', 'supplier')
+    list_filter = ('procurement_type',)
+    # 必要なら他のカラムも追加可能
 
 
 @admin.register(Material)
