@@ -89,7 +89,7 @@ class MaterialCSVLoader:
                 'debug_info': []
             }
 
-            # 列名マッピング（CSVの列名 → Materialモデルのフィールド名）
+            # 列マッピング辞書（実際のCSVの列名に合わせて調整）
             column_mapping = {
                 '原料ID': 'material_id',
                 '原料名': 'material_name',
@@ -117,7 +117,7 @@ class MaterialCSVLoader:
                         supplier = self.safe_get_value(row, '販売者', '')
                         application = self.safe_get_value(row, '荷姿', '')
 
-                        # 備考は複数の列から結合
+                        # 備考の結合
                         remarks_parts = []
                         for col in ['品質管理備考', '生産本部備考', 'ラベル用備考']:
                             remark = self.safe_get_value(row, col, '').strip()
@@ -128,7 +128,7 @@ class MaterialCSVLoader:
                         # 数値フィールドの処理
                         unit_price = self.safe_get_decimal(row, '単価')
 
-                        # 正袋重量から発注量を取得（例: "25kg" → 25.0）
+                        # 正袋重量から発注量を取得
                         order_quantity_str = self.safe_get_value(row, '正袋重量', '0')
                         order_quantity = self.extract_numeric_from_string(order_quantity_str)
 
@@ -148,8 +148,6 @@ class MaterialCSVLoader:
                                 'category': material_category
                             }
                             results['debug_info'].append(debug_info)
-                            print(
-                                f"  行{idx + 1}: ID={material_id}, 名前={material_name[:30]}, 製造所={manufacturer[:20]}, 販売者={supplier[:20]}")
 
                         # データベース保存
                         material, created = Material.objects.get_or_create(
@@ -188,8 +186,7 @@ class MaterialCSVLoader:
                         results['skipped'] += 1
                         continue
 
-            print(
-                f"\n✅ 処理完了: 新規{results['created']}件, 更新{results['updated']}件, スキップ{results['skipped']}件")
+            print(f"\n✅ 処理完了: 新規{results['created']}件, 更新{results['updated']}件, スキップ{results['skipped']}件")
             return results
 
         except Exception as e:
@@ -218,7 +215,7 @@ class MaterialCSVLoader:
             # カンマや通貨記号を除去
             cleaned = re.sub(r'[^\d.-]', '', value_str)
 
-            # 複数の小数点やマイナス記号を処理
+            # 複数の小数点を処理
             if cleaned.count('.') > 1:
                 parts = cleaned.split('.')
                 cleaned = parts[0] + '.' + ''.join(parts[1:])
