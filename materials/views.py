@@ -163,3 +163,94 @@ CSV読み込み完了！
             messages.error(request, f"システムエラー: {str(e)}")
 
     return redirect('materials:material_list')
+
+
+def load_csv_data(request):
+    """CSVデータの読み込み（上書き機能付き）"""
+    if request.method == 'POST':
+        try:
+            # 上書きモードを取得（デフォルトは'update'）
+            overwrite_mode = request.POST.get('overwrite_mode', 'update')
+
+            csv_loader = MaterialCSVLoader()
+            result = csv_loader.load_materials_with_overwrite(overwrite_mode)
+
+            if result.get('success'):
+                # 読み込み後、全データを確実に有効化
+                Material.objects.all().update(is_active=True)
+
+                success_msg = f"""
+CSV読み込み完了！
+• 上書きモード: {result.get('overwrite_mode', 'update')}
+• 新規作成: {result.get('created', 0)}件
+• 更新: {result.get('updated', 0)}件
+• スキップ: {result.get('skipped', 0)}件
+• 全データを有効化しました
+                """
+                messages.success(request, success_msg)
+
+            else:
+                messages.error(request, f"読み込みエラー: {result.get('error', '不明')}")
+
+        except Exception as e:
+            messages.error(request, f"システムエラー: {str(e)}")
+
+    return redirect('materials:material_list')
+
+
+def load_csv_with_options(request):
+    """CSVデータ読み込みオプション画面"""
+    if request.method == 'POST':
+        overwrite_mode = request.POST.get('overwrite_mode', 'update')
+
+        try:
+            csv_loader = MaterialCSVLoader()
+            result = csv_loader.load_materials_with_overwrite(overwrite_mode)
+
+            if result.get('success'):
+                Material.objects.all().update(is_active=True)
+
+                success_msg = f"""
+CSV読み込み完了！
+• 上書きモード: {result.get('overwrite_mode')}
+• 新規作成: {result.get('created', 0)}件
+• 更新: {result.get('updated', 0)}件
+• スキップ: {result.get('skipped', 0)}件
+• 処理行数: {result.get('total_rows', 0)}行
+• エンコーディング: {result.get('encoding_used', '不明')}
+                """
+                messages.success(request, success_msg)
+
+                if result.get('errors'):
+                    error_msg = f"エラー {len(result['errors'])}件発生: {', '.join(result['errors'][:3])}"
+                    messages.warning(request, error_msg)
+
+            else:
+                messages.error(request, f"読み込みエラー: {result.get('error')}")
+
+        except Exception as e:
+            messages.error(request, f"システムエラー: {str(e)}")
+
+        return redirect('materials:material_list')
+
+    # GET リクエストの場合、オプション画面を表示
+    try:
+        csv_loader = MaterialCSVLoader()
+        csv_analysis = csv_loader.analyze_csv_structure()
+
+        # 現在のデータベース状況
+        db_status = {
+            'total_count': Material.objects.count(),
+            'active_count': Material.objects.filter(is_active=True).count(),
+        }
+
+        context = {
+            'csv_analysis': csv_analysis,
+            'db_status': db_status,
+        }
+
+        return render(request, 'materials/csv_load_options.html', context)
+
+    except Exception as e:
+        messages.error(request, f"CSV分析エラー: {str(e)}")
+        return redirect('materials:material_list')

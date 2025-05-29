@@ -1,0 +1,192 @@
+{% extends "base.html" %}
+
+{% block title %}CSV読み込みオプション{% endblock %}
+
+{% block content %}
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700&display=swap" rel="stylesheet">
+<style>
+    body, .card, .form-control, .form-select, .btn {
+        font-family: 'Noto Sans JP', sans-serif !important;
+    }
+    .option-card {
+        border-left: 4px solid #1976d2;
+        margin-bottom: 1rem;
+    }
+    .status-card {
+        background: #f8f9fa;
+        border: 1px solid #dee2e6;
+        border-radius: 8px;
+        padding: 1rem;
+        margin-bottom: 1rem;
+    }
+    .mode-description {
+        font-size: 0.9rem;
+        color: #6c757d;
+        margin-top: 0.5rem;
+    }
+    .recommended {
+        border-color: #28a745 !important;
+        background-color: #f8fff9;
+    }
+    .warning {
+        border-color: #ffc107 !important;
+        background-color: #fffbf0;
+    }
+    .danger {
+        border-color: #dc3545 !important;
+        background-color: #fff5f5;
+    }
+</style>
+
+<div class="container py-4">
+    <h2 class="fw-bold text-primary mb-4">
+        <i class="fas fa-upload me-2"></i>CSV読み込みオプション
+    </h2>
+
+    <!-- 現在の状況 -->
+    <div class="status-card">
+        <h5><i class="fas fa-info-circle me-2"></i>現在の状況</h5>
+        <div class="row">
+            <div class="col-md-6">
+                <p><strong>データベース:</strong></p>
+                <ul>
+                    <li>総レコード数: {{ db_status.total_count }}件</li>
+                    <li>有効レコード数: {{ db_status.active_count }}件</li>
+                </ul>
+            </div>
+            <div class="col-md-6">
+                {% if csv_analysis.success %}
+                <p><strong>CSVファイル:</strong></p>
+                <ul>
+                    <li>エンコーディング: {{ csv_analysis.encoding }}</li>
+                    <li>推定行数: {{ csv_analysis.total_rows }}行</li>
+                    <li>列数: {{ csv_analysis.columns|length }}列</li>
+                    {% if csv_analysis.duplicates_in_sample > 0 %}
+                    <li class="text-warning">⚠️ 重複ID: {{ csv_analysis.duplicates_in_sample }}件</li>
+                    {% endif %}
+                </ul>
+                {% else %}
+                <p class="text-danger">❌ CSVファイルが読み込めません: {{ csv_analysis.error }}</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    {% if csv_analysis.success %}
+    <!-- 上書きモード選択 -->
+    <form method="post" class="mb-4">
+        {% csrf_token %}
+        
+        <h5 class="mb-3">上書きモードを選択してください</h5>
+
+        <!-- 更新モード（推奨） -->
+        <div class="card option-card recommended">
+            <div class="card-body">
+                <div class="form-check">
+                    <input class="form-check-input" type="radio" name="overwrite_mode" id="mode_update" value="update" checked>
+                    <label class="form-check-label fw-bold text-success" for="mode_update">
+                        <i class="fas fa-sync-alt me-2"></i>更新モード（推奨）
+                    </label>
+                </div>
+                <div class="mode-description">
+                    同じ原料IDが存在する場合は内容を更新し、存在しない場合は新規作成します。
+                    <strong>最も安全で推奨</strong>されるモードです。
+                </div>
+            </div>
+        </div>
+
+        <!-- スキップモード -->
+        <div class="card option-card warning">
+            <div class="card-body">
+                <div class="form-check">
+                    <input class="form-check-input" type="radio" name="overwrite_mode" id="mode_skip" value="skip">
+                    <label class="form-check-label fw-bold text-warning" for="mode_skip">
+                        <i class="fas fa-forward me-2"></i>スキップモード
+                    </label>
+                </div>
+                <div class="mode-description">
+                    同じ原料IDが既に存在する場合はスキップし、新しいもののみを追加します。
+                    既存データを保護したい場合に使用します。
+                </div>
+            </div>
+        </div>
+
+        <!-- 置換モード（注意） -->
+        <div class="card option-card danger">
+            <div class="card-body">
+                <div class="form-check">
+                    <input class="form-check-input" type="radio" name="overwrite_mode" id="mode_replace" value="replace">
+                    <label class="form-check-label fw-bold text-danger" for="mode_replace">
+                        <i class="fas fa-exclamation-triangle me-2"></i>完全置換モード（注意）
+                    </label>
+                </div>
+                <div class="mode-description">
+                    同じ原料IDの既存データを<strong>完全に削除</strong>してから新規作成します。
+                    <strong>注意:</strong> 既存データの内容が失われます。
+                </div>
+            </div>
+        </div>
+
+        <div class="d-flex gap-2 mt-4">
+            <button type="submit" class="btn btn-primary">
+                <i class="fas fa-upload me-2"></i>CSV読み込み実行
+            </button>
+            <a href="{% url 'materials:material_list' %}" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left me-2"></i>キャンセル
+            </a>
+        </div>
+    </form>
+
+    <!-- CSV詳細情報 -->
+    {% if csv_analysis.columns %}
+    <div class="card mt-4">
+        <div class="card-header">
+            <h6 class="mb-0"><i class="fas fa-table me-2"></i>CSV列情報</h6>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                {% for column in csv_analysis.columns %}
+                <div class="col-md-4 col-sm-6 mb-2">
+                    <span class="badge bg-light text-dark">{{ column }}</span>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    {% else %}
+    <!-- CSVファイルが読み込めない場合 -->
+    <div class="alert alert-danger">
+        <h5><i class="fas fa-exclamation-triangle me-2"></i>CSVファイルの問題</h5>
+        <p>{{ csv_analysis.error }}</p>
+        <hr>
+        <p class="mb-0">
+            <strong>対処方法:</strong>
+            <ul>
+                <li>dataディレクトリにCSVファイルが存在することを確認</li>
+                <li>ファイルのエンコーディングがCP932またはUTF-8であることを確認</li>
+                <li>ファイルが破損していないことを確認</li>
+            </ul>
+        </p>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+// ラジオボタン選択時の色変更
+document.querySelectorAll('input[name="overwrite_mode"]').forEach(radio => {
+    radio.addEventListener('change', function() {
+        document.querySelectorAll('.option-card').forEach(card => {
+            card.classList.remove('border-primary');
+        });
+        if (this.checked) {
+            this.closest('.option-card').classList.add('border-primary');
+        }
+    });
+});
+
+// 初期選択の色設定
+document.querySelector('input[name="overwrite_mode"]:checked').closest('.option-card').classList.add('border-primary');
+</script>
+{% endblock %}
