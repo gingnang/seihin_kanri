@@ -3,613 +3,181 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>原料管理システム - 改良版</title>
+    <title>原料管理システム - デバッグ版</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        :root {
-            --primary-blue: #1e40af;
-            --success-green: #059669;
-            --warning-orange: #d97706;
-            --danger-red: #dc2626;
-            --bg-light: #f8fafc;
-        }
-
-        body {
-            font-family: 'Inter', sans-serif;
-            background-color: var(--bg-light);
-            font-size: 0.9rem;
-        }
-
-        .navbar {
-            background: linear-gradient(135deg, var(--primary-blue), #3b82f6);
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-        }
-
-        .stats-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-            gap: 1rem;
-            margin-bottom: 1.5rem;
-        }
-
-        .stat-card {
-            background: white;
-            border-radius: 8px;
-            padding: 1rem;
-            text-align: center;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            transition: transform 0.2s ease;
-        }
-
-        .stat-card:hover {
-            transform: translateY(-2px);
-        }
-
-        .stat-number {
-            font-size: 1.8rem;
-            font-weight: bold;
-            margin-bottom: 0.25rem;
-        }
-
-        .stat-label {
-            font-size: 0.75rem;
-            text-transform: uppercase;
-            opacity: 0.7;
-        }
-
-        .card {
-            border: none;
-            border-radius: 12px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-            margin-bottom: 1rem;
-        }
-
-        .table {
-            font-size: 0.85rem;
-        }
-
-        .table thead th {
-            background-color: var(--primary-blue);
-            color: white;
-            font-weight: 600;
-            border: none;
-            position: sticky;
-            top: 0;
-            z-index: 10;
-        }
-
-        .table tbody tr:hover {
-            background-color: #f1f5f9;
-        }
-
-        .material-id {
-            font-family: 'Monaco', 'Consolas', monospace;
-            font-weight: bold;
-            color: var(--primary-blue);
-        }
-
-        .debug-panel {
+        .debug-info {
             background-color: #1a1a1a;
             color: #00ff00;
             padding: 1rem;
             border-radius: 8px;
-            font-family: 'Monaco', 'Consolas', monospace;
-            font-size: 0.8rem;
+            font-family: monospace;
             margin-bottom: 1rem;
         }
-
-        .filter-row {
-            background: white;
-            padding: 1rem;
-            border-radius: 8px;
-            margin-bottom: 1rem;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        .material-id {
+            font-family: monospace;
+            font-weight: bold;
+            color: #0066cc;
         }
-
-        .bulk-actions {
-            background: #fff3cd;
-            border: 1px solid #ffeaa7;
-            border-radius: 8px;
-            padding: 0.75rem;
-            margin-bottom: 1rem;
-            display: none;
-        }
-
-        .bulk-actions.show {
-            display: block;
-        }
-
-        .status-active { color: var(--success-green); }
-        .status-inactive { color: var(--danger-red); }
     </style>
 </head>
 <body>
-    <!-- ナビゲーション -->
-    <nav class="navbar navbar-expand-lg navbar-dark">
-        <div class="container-fluid">
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container">
             <a class="navbar-brand" href="/">
-                <i class="fas fa-industry me-2"></i>原料管理システム
-                <span class="badge bg-success ms-2">改良版</span>
+                <i class="fas fa-flask me-2"></i>原料管理システム - デバッグ版
             </a>
-            <div class="navbar-nav ms-auto">
-                <a class="nav-link" href="{% url 'materials:dashboard' %}">
-                    <i class="fas fa-tachometer-alt me-1"></i>ダッシュボード
-                </a>
-                <a class="nav-link" href="?debug=1">
-                    <i class="fas fa-bug me-1"></i>デバッグ
-                </a>
-                <a class="nav-link" href="/admin/">
-                    <i class="fas fa-cog me-1"></i>管理画面
-                </a>
-            </div>
         </div>
     </nav>
 
-    <div class="container-fluid mt-3">
+    <div class="container mt-4">
+        <h2>原料一覧</h2>
+
         <!-- デバッグ情報 -->
-        {% if debug_mode %}
-        <div class="debug-panel">
-            <h6><i class="fas fa-bug me-2"></i>DEBUG INFORMATION</h6>
-            <div class="row">
-                <div class="col-md-6">
-                    <strong>Database Stats:</strong><br>
-                    • Total Materials: {{ stats.total_materials }}<br>
-                    • Active: {{ stats.active_materials }}<br>
-                    • Inactive: {{ stats.inactive_materials }}<br>
-                    • With Manufacturer: {{ stats.with_manufacturer }}<br>
-                    • With Supplier: {{ stats.with_supplier }}
-                </div>
-                <div class="col-md-6">
-                    <strong>Query Info:</strong><br>
-                    • SQL Queries: {{ sql_queries }}<br>
-                    • Filtered Results: {{ total_count }}<br>
-                    • Page Size: {{ per_page }}<br>
-                    • Current Page: {{ page_obj.number }}
-                </div>
-            </div>
-        </div>
-        {% endif %}
-
-        <!-- 統計情報 -->
-        <div class="stats-grid">
-            <div class="stat-card">
-                <div class="stat-number text-primary">{{ total_count }}</div>
-                <div class="stat-label">表示中</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-number text-success">{{ stats.total_materials }}</div>
-                <div class="stat-label">総データ数</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-number text-info">{{ stats.active_materials }}</div>
-                <div class="stat-label">有効データ</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-number text-warning">{{ stats.with_manufacturer }}</div>
-                <div class="stat-label">製造所登録済</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-number text-secondary">{{ stats.with_supplier }}</div>
-                <div class="stat-label">発注先登録済</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-number text-success">{{ stats.with_price }}</div>
-                <div class="stat-label">価格設定済</div>
-            </div>
+        <div class="debug-info">
+            <strong>🔍 データベース状況:</strong><br>
+            • 総件数: {{ total_in_db }}<br>
+            • 有効: {{ active_in_db }}<br>
+            • 無効: {{ inactive_in_db }}<br>
+            • 表示中: {{ total_count }}<br>
+            • 現在ページ: {{ page_obj.number }} / {{ page_obj.paginator.num_pages }}<br>
+            • ページ内件数: {{ page_obj.object_list|length }}
         </div>
 
-        <!-- CSV管理 -->
-        <div class="card">
-            <div class="card-header bg-primary text-white">
-                <div class="d-flex justify-content-between align-items-center">
-                    <span><i class="fas fa-file-csv me-2"></i>データ管理</span>
-                    <button class="btn btn-outline-light btn-sm" onclick="analyzeCSV()">
-                        <i class="fas fa-search me-1"></i>CSV分析
-                    </button>
-                </div>
-            </div>
+        <!-- 簡単な検索 -->
+        <div class="card mb-3">
             <div class="card-body">
-                <div class="row align-items-center">
-                    <div class="col-md-8">
-                        {% if csv_info.exists %}
-                        <div class="d-flex align-items-center">
-                            <i class="fas fa-check-circle text-success me-2"></i>
-                            <span>CSV接続正常 ({{ csv_info.file_size|filesizeformat }})</span>
-                        </div>
-                        {% else %}
-                        <div class="d-flex align-items-center">
-                            <i class="fas fa-exclamation-triangle text-warning me-2"></i>
-                            <span>CSVファイル未検出</span>
-                        </div>
-                        {% endif %}
+                <form method="get" class="row g-3">
+                    <div class="col-md-4">
+                        <input type="text" class="form-control" name="search"
+                               value="{{ search_query }}" placeholder="原料ID・名前で検索">
                     </div>
-                    <div class="col-md-4 text-end">
-                        <form method="post" action="{% url 'materials:load_csv_data' %}" style="display: inline;">
-                            {% csrf_token %}
-                            <button type="submit" class="btn btn-success btn-sm">
-                                <i class="fas fa-download me-1"></i>CSV読み込み
-                            </button>
-                        </form>
+                    <div class="col-md-2">
+                        <select class="form-select" name="per_page">
+                            <option value="10" {% if per_page == 10 %}selected{% endif %}>10件</option>
+                            <option value="25" {% if per_page == 25 %}selected{% endif %}>25件</option>
+                            <option value="50" {% if per_page == 50 %}selected{% endif %}>50件</option>
+                            <option value="100" {% if per_page == 100 %}selected{% endif %}>100件</option>
+                        </select>
                     </div>
-                </div>
-                <!-- CSV分析結果 -->
-                <div id="csvAnalysisResult" class="mt-3" style="display: none;">
-                    <hr>
-                    <div id="csvAnalysisContent"></div>
-                </div>
-            </div>
-        </div>
-
-        <!-- 検索・フィルタ -->
-        <div class="card">
-            <div class="card-header bg-info text-white">
-                <div class="d-flex justify-content-between align-items-center">
-                    <span><i class="fas fa-search me-2"></i>検索・フィルタ</span>
-                    {% if has_filters %}
-                    <a href="{% url 'materials:material_list' %}" class="btn btn-outline-light btn-sm">
-                        <i class="fas fa-times me-1"></i>クリア
-                    </a>
-                    {% endif %}
-                </div>
-            </div>
-            <div class="card-body">
-                <form method="get" id="filterForm">
-                    <div class="row g-2">
-                        <div class="col-md-3">
-                            <input type="text" class="form-control form-control-sm" name="search"
-                                   value="{{ search_query }}" placeholder="原料名・ID・製造所・発注先を検索">
-                        </div>
-                        <div class="col-md-2">
-                            <select class="form-select form-select-sm" name="manufacturer">
-                                <option value="">すべての製造所</option>
-                                {% for manufacturer in filter_options.manufacturers %}
-                                <option value="{{ manufacturer }}" {% if manufacturer == manufacturer_filter %}selected{% endif %}>
-                                    {{ manufacturer|truncatechars:20 }}
-                                </option>
-                                {% endfor %}
-                            </select>
-                        </div>
-                        <div class="col-md-2">
-                            <select class="form-select form-select-sm" name="supplier">
-                                <option value="">すべての発注先</option>
-                                {% for supplier in filter_options.suppliers %}
-                                <option value="{{ supplier }}" {% if supplier == supplier_filter %}selected{% endif %}>
-                                    {{ supplier|truncatechars:20 }}
-                                </option>
-                                {% endfor %}
-                            </select>
-                        </div>
-                        <div class="col-md-1">
-                            <input type="number" class="form-control form-control-sm" name="price_min"
-                                   value="{{ price_min }}" placeholder="最低価格">
-                        </div>
-                        <div class="col-md-1">
-                            <input type="number" class="form-control form-control-sm" name="price_max"
-                                   value="{{ price_max }}" placeholder="最高価格">
-                        </div>
-                        <div class="col-md-2">
-                            <select class="form-select form-select-sm" name="per_page">
-                                <option value="25" {% if per_page == 25 %}selected{% endif %}>25件表示</option>
-                                <option value="50" {% if per_page == 50 %}selected{% endif %}>50件表示</option>
-                                <option value="100" {% if per_page == 100 %}selected{% endif %}>100件表示</option>
-                                <option value="200" {% if per_page == 200 %}selected{% endif %}>200件表示</option>
-                            </select>
-                        </div>
-                        <div class="col-md-1">
-                            <button type="submit" class="btn btn-primary btn-sm w-100">
-                                <i class="fas fa-search"></i>
-                            </button>
+                    <div class="col-md-2">
+                        <div class="form-check mt-2">
+                            <input class="form-check-input" type="checkbox" name="show_all" value="1"
+                                   {% if show_all %}checked{% endif %}>
+                            <label class="form-check-label">全データ表示</label>
                         </div>
                     </div>
-                    <div class="row g-2 mt-2">
-                        <div class="col-md-3">
-                            <div class="form-check">
-                                <input class="form-check-input" type="checkbox" name="show_inactive" value="1"
-                                       {% if show_inactive %}checked{% endif %} id="showInactive">
-                                <label class="form-check-label" for="showInactive">
-                                    無効データも表示
-                                </label>
-                            </div>
-                        </div>
+                    <div class="col-md-2">
+                        <button type="submit" class="btn btn-primary">検索</button>
+                    </div>
+                    <div class="col-md-2">
+                        <a href="{% url 'materials:material_list' %}" class="btn btn-secondary">クリア</a>
                     </div>
                 </form>
             </div>
         </div>
 
-        <!-- 一括操作 -->
-        <div class="bulk-actions" id="bulkActions">
-            <div class="d-flex justify-content-between align-items-center">
-                <span><strong><span id="selectedCount">0</span>件選択中</strong></span>
-                <div>
-                    <form method="post" action="{% url 'materials:bulk_update_materials' %}" style="display: inline;">
-                        {% csrf_token %}
-                        <input type="hidden" name="material_ids" id="selectedIds" value="">
-                        <button type="submit" name="action" value="activate" class="btn btn-success btn-sm">
-                            <i class="fas fa-check me-1"></i>有効化
-                        </button>
-                        <button type="submit" name="action" value="deactivate" class="btn btn-warning btn-sm">
-                            <i class="fas fa-times me-1"></i>無効化
-                        </button>
-                        <button type="submit" name="action" value="delete" class="btn btn-danger btn-sm"
-                                onclick="return confirm('選択した原料を削除しますか？')">
-                            <i class="fas fa-trash me-1"></i>削除
-                        </button>
-                    </form>
-                </div>
+        <!-- CSV読み込み -->
+        <div class="card mb-3">
+            <div class="card-body">
+                <form method="post" action="{% url 'materials:load_csv_data' %}">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-success">
+                        CSV読み込み（全データ有効化）
+                    </button>
+                </form>
             </div>
         </div>
 
         <!-- データテーブル -->
         <div class="card">
-            <div class="card-header bg-secondary text-white">
-                <div class="d-flex justify-content-between align-items-center">
-                    <span>
-                        <i class="fas fa-table me-2"></i>原料一覧
-                        <span class="badge bg-light text-dark ms-2">{{ total_count }}件</span>
-                        {% if has_filters %}
-                        <span class="badge bg-warning text-dark">フィルタ適用中</span>
-                        {% endif %}
-                    </span>
-                    <div>
-                        <input type="checkbox" id="selectAll" class="form-check-input me-2">
-                        <label for="selectAll" class="form-check-label text-light">全選択</label>
-                    </div>
-                </div>
+            <div class="card-header">
+                原料データ - {{ total_count }}件
             </div>
-            <div class="card-body p-0">
-                <div class="table-responsive" style="max-height: 70vh;">
-                    <table class="table table-hover table-sm mb-0">
+            <div class="card-body">
+                {% if page_obj.object_list %}
+                <div class="table-responsive">
+                    <table class="table table-striped">
                         <thead>
                             <tr>
-                                <th width="40">選択</th>
-                                <th width="80">原料ID</th>
-                                <th width="200">原料名</th>
-                                <th width="120">製造所</th>
-                                <th width="120">発注先</th>
-                                <th width="80">荷姿</th>
-                                <th width="70">単価</th>
-                                <th width="70">重量</th>
-                                <th width="60">状態</th>
-                                <th width="80">区分</th>
-                                <th width="150">備考</th>
-                                <th width="60">操作</th>
+                                <th>原料ID</th>
+                                <th>原料名</th>
+                                <th>製造所</th>
+                                <th>発注先</th>
+                                <th>単価</th>
+                                <th>状態</th>
+                                <th>操作</th>
                             </tr>
                         </thead>
                         <tbody>
-                            {% for material in page_obj %}
+                            {% for material in page_obj.object_list %}
                             <tr>
-                                <td>
-                                    <input type="checkbox" class="form-check-input material-checkbox"
-                                           value="{{ material.id }}">
-                                </td>
-                                <td>
-                                    <span class="material-id">{{ material.material_id }}</span>
-                                </td>
-                                <td>
-                                    <a href="{% url 'materials:material_detail' material.pk %}"
-                                       class="text-decoration-none fw-medium"
-                                       title="{{ material.material_name }}">
-                                        {{ material.material_name|truncatechars:30 }}
-                                    </a>
-                                </td>
-                                <td>
-                                    <small class="text-muted" title="{{ material.manufacturer }}">
-                                        {{ material.manufacturer|default:"-"|truncatechars:15 }}
-                                    </small>
-                                </td>
-                                <td>
-                                    <small class="text-muted" title="{{ material.supplier }}">
-                                        {{ material.supplier|default:"-"|truncatechars:15 }}
-                                    </small>
-                                </td>
-                                <td>
-                                    <small class="text-muted">
-                                        {{ material.application|default:"-"|truncatechars:10 }}
-                                    </small>
-                                </td>
+                                <td><span class="material-id">{{ material.material_id }}</span></td>
+                                <td>{{ material.material_name|truncatechars:40 }}</td>
+                                <td>{{ material.manufacturer|default:"-"|truncatechars:20 }}</td>
+                                <td>{{ material.supplier|default:"-"|truncatechars:20 }}</td>
                                 <td>
                                     {% if material.unit_price > 0 %}
-                                    <span class="badge bg-success">
-                                        ¥{{ material.unit_price|floatformat:0 }}
-                                    </span>
+                                    ¥{{ material.unit_price|floatformat:0 }}
                                     {% else %}
-                                    <span class="text-muted">-</span>
-                                    {% endif %}
-                                </td>
-                                <td>
-                                    {% if material.order_quantity > 0 %}
-                                    <small class="text-info">{{ material.order_quantity|floatformat:1 }}kg</small>
-                                    {% else %}
-                                    <span class="text-muted">-</span>
+                                    -
                                     {% endif %}
                                 </td>
                                 <td>
                                     {% if material.is_active %}
-                                    <i class="fas fa-check-circle status-active" title="有効"></i>
+                                    <span class="badge bg-success">有効</span>
                                     {% else %}
-                                    <i class="fas fa-times-circle status-inactive" title="無効"></i>
+                                    <span class="badge bg-secondary">無効</span>
                                     {% endif %}
                                 </td>
                                 <td>
-                                    <span class="badge bg-secondary">
-                                        {{ material.material_category|default:"標準"|truncatechars:8 }}
-                                    </span>
-                                </td>
-                                <td>
-                                    <small class="text-muted" title="{{ material.remarks }}">
-                                        {{ material.remarks|default:"-"|truncatechars:20 }}
-                                    </small>
-                                </td>
-                                <td>
                                     <a href="{% url 'materials:material_detail' material.pk %}"
-                                       class="btn btn-outline-primary btn-sm">
-                                        <i class="fas fa-eye"></i>
-                                    </a>
-                                </td>
-                            </tr>
-                            {% empty %}
-                            <tr>
-                                <td colspan="12" class="text-center py-4">
-                                    <i class="fas fa-inbox text-muted fa-2x mb-2"></i>
-                                    <br>
-                                    <span class="text-muted">条件に一致する原料が見つかりません</span>
+                                       class="btn btn-sm btn-outline-primary">詳細</a>
                                 </td>
                             </tr>
                             {% endfor %}
                         </tbody>
                     </table>
                 </div>
+                {% else %}
+                <div class="alert alert-warning">
+                    <h5>⚠️ データが表示されていません</h5>
+                    <p>考えられる原因:</p>
+                    <ul>
+                        <li>データベースにデータが存在しない → CSV読み込みを実行してください</li>
+                        <li>全データがis_active=Falseになっている → 「全データ表示」をチェックして確認</li>
+                        <li>検索条件が厳しすぎる → 検索をクリアしてください</li>
+                    </ul>
+                </div>
+                {% endif %}
             </div>
         </div>
 
         <!-- ページネーション -->
         {% if page_obj.has_other_pages %}
         <nav class="mt-3">
-            <ul class="pagination pagination-sm justify-content-center">
+            <ul class="pagination justify-content-center">
                 {% if page_obj.has_previous %}
                 <li class="page-item">
-                    <a class="page-link" href="?page=1&{{ request.GET.urlencode }}">
-                        <i class="fas fa-angle-double-left"></i>
-                    </a>
-                </li>
-                <li class="page-item">
-                    <a class="page-link" href="?page={{ page_obj.previous_page_number }}&{{ request.GET.urlencode }}">
-                        <i class="fas fa-angle-left"></i>
-                    </a>
+                    <a class="page-link" href="?page={{ page_obj.previous_page_number }}&search={{ search_query }}&per_page={{ per_page }}&show_all={{ show_all|yesno:'1,0' }}">前へ</a>
                 </li>
                 {% endif %}
 
-                <!-- ページ番号 -->
-                {% for num in page_obj.paginator.page_range %}
-                {% if page_obj.number == num %}
                 <li class="page-item active">
-                    <span class="page-link">{{ num }}</span>
+                    <span class="page-link">{{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span>
                 </li>
-                {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
-                <li class="page-item">
-                    <a class="page-link" href="?page={{ num }}&{{ request.GET.urlencode }}">{{ num }}</a>
-                </li>
-                {% endif %}
-                {% endfor %}
 
                 {% if page_obj.has_next %}
                 <li class="page-item">
-                    <a class="page-link" href="?page={{ page_obj.next_page_number }}&{{ request.GET.urlencode }}">
-                        <i class="fas fa-angle-right"></i>
-                    </a>
-                </li>
-                <li class="page-item">
-                    <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}&{{ request.GET.urlencode }}">
-                        <i class="fas fa-angle-double-right"></i>
-                    </a>
+                    <a class="page-link" href="?page={{ page_obj.next_page_number }}&search={{ search_query }}&per_page={{ per_page }}&show_all={{ show_all|yesno:'1,0' }}">次へ</a>
                 </li>
                 {% endif %}
             </ul>
         </nav>
         {% endif %}
 
-        <!-- フッター -->
-        <div class="text-center py-3">
-            <small class="text-muted">
-                原料管理システム 改良版 |
-                表示: {{ page_obj.start_index }}-{{ page_obj.end_index }} / {{ total_count }}件 |
-                最終更新: {% now "Y-m-d H:i" %}
-            </small>
-        </div>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script>
-        // CSV分析機能
-        async function analyzeCSV() {
-            const resultDiv = document.getElementById('csvAnalysisResult');
-            const contentDiv = document.getElementById('csvAnalysisContent');
-
-            contentDiv.innerHTML = '<div class="text-center"><i class="fas fa-spinner fa-spin me-2"></i>分析中...</div>';
-            resultDiv.style.display = 'block';
-
-            try {
-                const response = await fetch('{% url "materials:analyze_csv_structure" %}');
-                const data = await response.json();
-
-                if (data.error) {
-                    contentDiv.innerHTML = `<div class="alert alert-danger">${data.error}</div>`;
-                    return;
-                }
-
-                let html = `
-                    <div class="row">
-                        <div class="col-md-4">
-                            <div class="alert alert-info">
-                                <h6>ファイル情報</h6>
-                                <ul class="mb-0">
-                                    <li>エンコーディング: ${data.encoding}</li>
-                                    <li>総行数: ${data.total_rows}</li>
-                                    <li>列数: ${data.columns.length}</li>
-                                </ul>
-                            </div>
-                        </div>
-                        <div class="col-md-8">
-                            <div class="alert alert-success">
-                                <h6>検出された列</h6>
-                                <div class="small">
-                                    ${data.columns.slice(0, 10).map(col =>
-                                        `<span class="badge bg-light text-dark me-1 mb-1">${col}</span>`
-                                    ).join('')}
-                                    ${data.columns.length > 10 ? `<span class="text-muted">...他${data.columns.length - 10}列</span>` : ''}
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                `;
-                contentDiv.innerHTML = html;
-
-            } catch (error) {
-                contentDiv.innerHTML = `<div class="alert alert-danger">分析エラー: ${error.message}</div>`;
-            }
-        }
-
-        // 一括選択機能
-        document.addEventListener('DOMContentLoaded', function() {
-            const selectAll = document.getElementById('selectAll');
-            const checkboxes = document.querySelectorAll('.material-checkbox');
-            const bulkActions = document.getElementById('bulkActions');
-            const selectedCount = document.getElementById('selectedCount');
-            const selectedIds = document.getElementById('selectedIds');
-
-            function updateBulkActions() {
-                const selected = Array.from(checkboxes).filter(cb => cb.checked);
-                const count = selected.length;
-
-                if (count > 0) {
-                    bulkActions.classList.add('show');
-                    selectedCount.textContent = count;
-                    selectedIds.value = selected.map(cb => cb.value).join(',');
-                } else {
-                    bulkActions.classList.remove('show');
-                }
-            }
-
-            selectAll.addEventListener('change', function() {
-                checkboxes.forEach(cb => cb.checked = this.checked);
-                updateBulkActions();
-            });
-
-            checkboxes.forEach(cb => {
-                cb.addEventListener('change', updateBulkActions);
-            });
-
-            // 自動フィルタ送信
-            const filterForm = document.getElementById('filterForm');
-            const autoSubmitElements = filterForm.querySelectorAll('select, input[type="checkbox"]');
-
-            autoSubmitElements.forEach(element => {
-                element.addEventListener('change', function() {
-                    filterForm.submit();
-                });
-            });
-        });
-    </script>
 </body>
 </html>
