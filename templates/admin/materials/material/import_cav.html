@@ -1,0 +1,172 @@
+# 🚀 完全セットアップガイド
+
+## 📁 ファイル配置
+
+### 1. プロジェクト構造を確認
+```
+your_project/
+├── materials/
+│   ├── models.py          # 修正版に更新
+│   ├── views.py           # 修正版に更新
+│   ├── csv_loader.py      # 修正版に更新
+│   ├── admin.py           # 修正版に更新
+│   └── templates/
+│       └── admin/
+│           └── materials/
+│               └── material/
+│                   └── import_csv.html  # 新規作成
+├── data/                  # 新規作成
+│   └── 原料マスタ詳細.csv  # CSVファイルをここに配置
+└── manage.py
+```
+
+### 2. ディレクトリ作成
+```bash
+# dataディレクトリを作成
+mkdir data
+
+# テンプレートディレクトリを作成
+mkdir -p materials/templates/admin/materials/material
+```
+
+## 🔧 ファイル更新手順
+
+### ステップ 1: モデル、ビュー、CSV ローダーを更新
+1. `materials/models.py` を修正版に置き換え
+2. `materials/views.py` を修正版に置き換え
+3. `materials/csv_loader.py` を修正版に置き換え
+4. `materials/admin.py` を修正版に置き換え
+5. `materials/templates/admin/materials/material/import_csv.html` を作成
+
+### ステップ 2: CSVファイルの準備
+2つの選択肢があります：
+
+#### 選択肢A: 既存のCSVファイルを使用
+- 既存の `原料マスタ詳細.csv` を `data/` ディレクトリに配置
+
+#### 選択肢B: サンプルCSVファイルを使用
+- 提供したサンプルCSVの内容を `data/原料マスタ詳細.csv` として保存
+
+## 🗄️ データベースのセットアップ
+
+### ステップ 3: マイグレーション実行
+```bash
+# 1. 既存のマイグレーションをリセット（データが削除されます）
+python manage.py migrate materials zero
+
+# 2. 新しいマイグレーションを作成
+python manage.py makemigrations materials
+
+# 3. マイグレーションを実行
+python manage.py migrate
+
+# 4. スーパーユーザーを作成（必要に応じて）
+python manage.py createsuperuser
+```
+
+## 📥 CSVデータの読み込み
+
+### 方法1: Django シェルで実行
+```bash
+python manage.py shell
+```
+
+シェル内で実行：
+```python
+# まずCSVを診断
+exec(open('csv_diagnosis_script.py').read())
+
+# 問題なければデータ読み込み
+from materials.csv_loader import MaterialCSVLoader
+csv_loader = MaterialCSVLoader()
+result = csv_loader.load_materials()
+print(result)
+```
+
+### 方法2: Webインターフェースで実行
+1. 開発サーバーを起動: `python manage.py runserver`
+2. 材料一覧ページの「CSV読み込み」ボタンをクリック
+
+### 方法3: 管理画面で実行（推奨）
+1. 開発サーバーを起動: `python manage.py runserver`
+2. `http://127.0.0.1:8000/admin/` にアクセス
+3. 「原料」をクリック
+4. 右上の「CSV データ読み込み」リンクをクリック
+5. 分析結果を確認後、「CSV データを読み込む」ボタンをクリック
+
+## 🔍 トラブルシューティング
+
+### エラー: "CSVファイルが見つかりません"
+```bash
+# データディレクトリを作成
+mkdir data
+
+# CSVファイルが正しい場所にあるか確認
+ls -la data/
+```
+
+### エラー: "no such column"
+```bash
+# データベースを完全にリセット
+rm db.sqlite3
+python manage.py makemigrations materials
+python manage.py migrate
+python manage.py createsuperuser
+```
+
+### エラー: "エンコーディングで読み込めません"
+1. CSVファイルをUTF-8で保存し直す
+2. または、診断スクリプトで推奨エンコーディングを確認
+
+### 読み込みは成功するが、データが表示されない
+```python
+# Django シェルで確認
+python manage.py shell
+
+from materials.models import Material
+print(f"総数: {Material.objects.count()}")
+print(f"有効: {Material.objects.filter(is_active=True).count()}")
+
+# 全データを有効化
+Material.objects.all().update(is_active=True)
+```
+
+## ✅ 成功確認
+
+### 1. データベース確認
+```python
+python manage.py shell
+
+from materials.models import Material
+materials = Material.objects.all()[:5]
+for m in materials:
+    print(f"{m.material_id}: {m.material_name} (有効: {m.is_active})")
+```
+
+### 2. Web画面確認
+1. `http://127.0.0.1:8000/` にアクセス
+2. 原料一覧が表示されることを確認
+3. 検索・フィルタ機能が動作することを確認
+
+### 3. 管理画面確認
+1. `http://127.0.0.1:8000/admin/` にアクセス
+2. 原料データが管理画面で確認できることを確認
+
+## 📊 期待される結果
+
+成功した場合、以下のような出力が表示されます：
+
+```
+📊 CSV情報:
+- エンコーディング: cp932
+- 行数: 621
+- 列数: 9
+- 列名: ['原料ID', '原料名', '製造所', '販売者', '荷姿', '単価', '正袋重量', '品質管理備考', '原料区分']
+
+✅ 処理完了:
+   新規作成: 621件
+   更新: 0件
+   スキップ: 0件
+```
+
+この手順で問題が解決されない場合は、具体的なエラーメッセージをお知らせください。
