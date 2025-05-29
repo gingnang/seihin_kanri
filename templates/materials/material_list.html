@@ -1,38 +1,26 @@
-<!DOCTYPE html>
-<html lang="ja">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>原料管理システム - デバッグ版</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <style>
-        .debug-info {
-            background-color: #1a1a1a;
-            color: #00ff00;
-            padding: 1rem;
-            border-radius: 8px;
-            font-family: monospace;
-            margin-bottom: 1rem;
-        }
-        .material-id {
-            font-family: monospace;
-            font-weight: bold;
-            color: #0066cc;
-        }
-    </style>
-</head>
-<body>
-    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
-        <div class="container">
-            <a class="navbar-brand" href="/">
-                <i class="fas fa-flask me-2"></i>原料管理システム - デバッグ版
-            </a>
-        </div>
-    </nav>
+{% extends 'materials/base.html' %}
 
-    <div class="container mt-4">
-        <h2>原料一覧</h2>
+{% block title %}原料一覧 - デバッグ版{% endblock %}
 
+{% block content %}
+<style>
+    .debug-info {
+        background-color: #1a1a1a;
+        color: #00ff00;
+        padding: 1rem;
+        border-radius: 8px;
+        font-family: monospace;
+        margin-bottom: 1rem;
+    }
+    .material-id {
+        font-family: monospace;
+        font-weight: bold;
+        color: #0066cc;
+    }
+</style>
+
+<h2>原料一覧</h2>
+        
         <!-- デバッグ情報 -->
         <div class="debug-info">
             <strong>🔍 データベース状況:</strong><br>
@@ -43,13 +31,13 @@
             • 現在ページ: {{ page_obj.number }} / {{ page_obj.paginator.num_pages }}<br>
             • ページ内件数: {{ page_obj.object_list|length }}
         </div>
-
+        
         <!-- 簡単な検索 -->
         <div class="card mb-3">
             <div class="card-body">
                 <form method="get" class="row g-3">
                     <div class="col-md-4">
-                        <input type="text" class="form-control" name="search"
+                        <input type="text" class="form-control" name="search" 
                                value="{{ search_query }}" placeholder="原料ID・名前で検索">
                     </div>
                     <div class="col-md-2">
@@ -62,7 +50,7 @@
                     </div>
                     <div class="col-md-2">
                         <div class="form-check mt-2">
-                            <input class="form-check-input" type="checkbox" name="show_all" value="1"
+                            <input class="form-check-input" type="checkbox" name="show_all" value="1" 
                                    {% if show_all %}checked{% endif %}>
                             <label class="form-check-label">全データ表示</label>
                         </div>
@@ -131,7 +119,7 @@
                                     {% endif %}
                                 </td>
                                 <td>
-                                    <a href="{% url 'materials:material_detail' material.pk %}"
+                                    <a href="{% url 'materials:material_detail' material.pk %}" 
                                        class="btn btn-sm btn-outline-primary">詳細</a>
                                 </td>
                             </tr>
@@ -162,11 +150,11 @@
                     <a class="page-link" href="?page={{ page_obj.previous_page_number }}&search={{ search_query }}&per_page={{ per_page }}&show_all={{ show_all|yesno:'1,0' }}">前へ</a>
                 </li>
                 {% endif %}
-
+                
                 <li class="page-item active">
                     <span class="page-link">{{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span>
                 </li>
-
+                
                 {% if page_obj.has_next %}
                 <li class="page-item">
                     <a class="page-link" href="?page={{ page_obj.next_page_number }}&search={{ search_query }}&per_page={{ per_page }}&show_all={{ show_all|yesno:'1,0' }}">次へ</a>
@@ -176,8 +164,4 @@
         </nav>
         {% endif %}
 
-    </div>
-
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-</body>
-</html>
+{% endblock %}

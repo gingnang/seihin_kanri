@@ -145,25 +145,4 @@ CSV読み込み完了！
 
     return redirect('materials:material_list')
 
-
-def debug_data(request):
-    """データ状況確認用（デバッグページ）"""
-    materials = Material.objects.all()[:10]  # 最初の10件
-
-    debug_info = []
-    for m in materials:
-        debug_info.append({
-            'id': m.id,
-            'material_id': m.material_id,
-            'name': m.material_name[:30],
-            'is_active': m.is_active,
-            'created': m.created_at,
-        })
-
-    context = {
-        'debug_info': debug_info,
-        'total_count': Material.objects.count(),
-        'active_count': Material.objects.filter(is_active=True).count(),
-    }
-
-    return render(request, 'materials/debug.html', context)
+# debug_data関数は削除（不要）
