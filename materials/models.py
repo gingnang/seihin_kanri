@@ -6,9 +6,15 @@ class Material(models.Model):
     """原料マスタモデル"""
     material_id = models.CharField(max_length=50, unique=True, verbose_name="原料ID")
     material_name = models.CharField(max_length=200, verbose_name="原料名")
+    manufacturer = models.CharField(max_length=200, blank=True, verbose_name="製造所")
+    supplier = models.CharField(max_length=200, blank=True, verbose_name="発注先")
+    application = models.CharField(max_length=200, blank=True, verbose_name="適用")
     unit_price = models.DecimalField(max_digits=10, decimal_places=2, default=0, verbose_name="単価")
+    order_quantity = models.DecimalField(max_digits=10, decimal_places=3, default=0, verbose_name="発注量")
+    remarks = models.TextField(blank=True, verbose_name="備考")
+
+    # 既存フィールド（管理用）
     material_category = models.CharField(max_length=100, blank=True, verbose_name="原料区分")
-    supplier = models.CharField(max_length=200, blank=True, verbose_name="供給元")
     is_active = models.BooleanField(default=True, verbose_name="有効")
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="作成日時")
     updated_at = models.DateTimeField(auto_now=True, verbose_name="更新日時")

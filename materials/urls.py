@@ -1,10 +1,17 @@
-from django.urls import path
-from . import views
-
-app_name = 'materials'
+"""
+URL Configuration for genryou_kanri project.
+"""
+from django.contrib import admin
+from django.urls import path, include
+from django.conf import settings
+from django.conf.urls.static import static
 
 urlpatterns = [
-    path('', views.material_list, name='material_list'),
-    path('dashboard/', views.dashboard, name='dashboard'),
-    path('load-csv/', views.load_csv_data, name='load_csv_data'),
+    path('admin/', admin.site.urls),
+    path('', include('materials.urls')),
 ]
+
+# 開発環境でのメディアファイル配信
+if settings.DEBUG:
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+    urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
