@@ -1,11 +1,30 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-  <meta charset="UTF-8">
-  <title>{% block title %}原料管理システム{% endblock %}</title>
-  {% block extra_head %}{% endblock %}
+  <meta charset="utf-8">
+  <title>{% block title %}生産管理システム{% endblock %}</title>
+  <link rel="stylesheet" href="{% static 'dist/css/adminlte.min.css' %}">
+  <link rel="stylesheet" href="{% static 'dist/css/bootstrap.min.css' %}">
+  <link rel="stylesheet" href="{% static 'dist/css/fontawesome.min.css' %}">
 </head>
-<body>
-  {% block content %}{% endblock %}
+<body class="hold-transition sidebar-mini">
+<div class="wrapper">
+  <!-- ヘッダー -->
+  {% include 'includes/header.html' %}
+  <!-- サイドバー -->
+  {% include 'includes/sidebar.html' %}
+  <!-- メインコンテンツ -->
+  <div class="content-wrapper p-3">
+    {% block content %}
+    <!-- 各ページの中身 -->
+    {% endblock %}
+  </div>
+  <!-- フッター -->
+  {% include 'includes/footer.html' %}
+</div>
+<script src="{% static 'dist/js/jquery.min.js' %}"></script>
+<script src="{% static 'dist/js/bootstrap.bundle.min.js' %}"></script>
+<script src="{% static 'dist/js/adminlte.min.js' %}"></script>
 </body>
 </html>

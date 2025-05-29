@@ -42,6 +42,7 @@ INSTALLED_APPS = [
     'materials',  # 原料管理アプリ
 ]
 
+
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
@@ -53,6 +54,8 @@ MIDDLEWARE = [
 ]
 
 ROOT_URLCONF = 'genryou_kanri.urls'
+
+
 
 TEMPLATES = [
     {
