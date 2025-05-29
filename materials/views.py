@@ -8,8 +8,15 @@ from .models import Material
 from .csv_loader import MaterialCSVLoader
 from decimal import Decimal
 import logging
+from django.shortcuts import render
 
 logger = logging.getLogger(__name__)
+
+
+
+def top(request):
+    return render(request, 'top.html')  # top.htmlを表示
+
 
 
 def material_list(request):

@@ -11,6 +11,7 @@ from . import views
 app_name = 'materials'
 
 urlpatterns = [
+    path('', views.top, name='top'),
     path('materials/', views.material_list, name='material_list'),
     path('dashboard/', views.dashboard, name='dashboard'),
     path('load-csv/', views.load_csv_data, name='load_csv_data'),
