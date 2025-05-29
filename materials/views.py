@@ -1,24 +1,117 @@
 # -*- coding: utf-8 -*-
 from django.shortcuts import render, get_object_or_404, redirect
 from django.core.paginator import Paginator
-from django.db.models import Q
+from django.db.models import Q, Count, Avg, Min, Max
 from django.contrib import messages
 from django.http import JsonResponse
+from django.core.cache import cache
+from django.db import connection
 from .models import Material
 from .csv_loader import MaterialCSVLoader
 from decimal import Decimal
 import logging
-import traceback
-import os
-from django.conf import settings
 
 logger = logging.getLogger(__name__)
 
 
-def material_list(request):
-    """原料一覧ページ（検索・フィルタ機能付き）"""
+class MaterialViewHelper:
+    """原料ビュー用のヘルパークラス"""
 
-    # 検索・フィルタパラメータ取得
+    @staticmethod
+    def get_safe_field_value(obj, field_name, default=''):
+        """安全にフィールド値を取得"""
+        try:
+            return getattr(obj, field_name, default) or default
+        except:
+            return default
+
+    @staticmethod
+    def build_search_query(search_query):
+        """検索クエリを安全に構築"""
+        if not search_query:
+            return Q()
+
+        keywords = search_query.split()
+        query = Q()
+
+        # 検索対象フィールドのマッピング
+        search_fields = [
+            'material_id__icontains',
+            'material_name__icontains',
+            'manufacturer__icontains',
+            'supplier__icontains',
+            'application__icontains',
+            'remarks__icontains'
+        ]
+
+        for keyword in keywords:
+            keyword_query = Q()
+            for field in search_fields:
+                try:
+                    keyword_query |= Q(**{field: keyword})
+                except Exception as e:
+                    logger.warning(f"検索フィールド {field} でエラー: {e}")
+                    continue
+            query &= keyword_query
+
+        return query
+
+    @staticmethod
+    def get_database_stats():
+        """データベース統計情報を取得"""
+        try:
+            stats = {
+                'total_materials': Material.objects.count(),
+                'active_materials': Material.objects.filter(is_active=True).count(),
+                'inactive_materials': Material.objects.filter(is_active=False).count(),
+                'with_manufacturer': Material.objects.exclude(
+                    Q(manufacturer__isnull=True) | Q(manufacturer='')
+                ).count(),
+                'with_supplier': Material.objects.exclude(
+                    Q(supplier__isnull=True) | Q(supplier='')
+                ).count(),
+                'with_price': Material.objects.filter(unit_price__gt=0).count(),
+            }
+
+            # 価格統計
+            price_stats = Material.objects.filter(unit_price__gt=0).aggregate(
+                avg_price=Avg('unit_price'),
+                min_price=Min('unit_price'),
+                max_price=Max('unit_price')
+            )
+            stats.update(price_stats)
+
+            return stats
+        except Exception as e:
+            logger.error(f"統計情報取得エラー: {e}")
+            return {
+                'total_materials': 0,
+                'active_materials': 0,
+                'inactive_materials': 0,
+                'with_manufacturer': 0,
+                'with_supplier': 0,
+                'with_price': 0,
+                'avg_price': 0,
+                'min_price': 0,
+                'max_price': 0,
+            }
+
+
+def material_list(request):
+    """原料一覧ページ（改良版）"""
+
+    # デバッグモードの判定
+    debug_mode = request.GET.get('debug', '0') == '1'
+
+    # 統計情報取得
+    stats = MaterialViewHelper.get_database_stats()
+
+    if debug_mode:
+        print(f"🔍 DATABASE STATS:")
+        for key, value in stats.items():
+            print(f"   {key}: {value}")
+
+    # パラメータ取得
     search_query = request.GET.get('search', '').strip()
     category_filter = request.GET.get('category', '')
     manufacturer_filter = request.GET.get('manufacturer', '')
@@ -27,94 +120,88 @@ def material_list(request):
     price_max = request.GET.get('price_max', '')
     sort_by = request.GET.get('sort', 'material_id')
     sort_order = request.GET.get('order', 'asc')
-    per_page = int(request.GET.get('per_page', 100))
+    per_page = int(request.GET.get('per_page', 50))
+    show_inactive = request.GET.get('show_inactive', '0') == '1'
 
-    # 基本クエリ（全データを表示）
-    materials = Material.objects.all()
+    # ベースクエリ
+    if show_inactive:
+        materials = Material.objects.all()
+    else:
+        materials = Material.objects.filter(is_active=True)
 
     # 検索フィルタ適用
     if search_query:
-        keywords = search_query.split()
-        query = Q()
+        search_q = MaterialViewHelper.build_search_query(search_query)
+        materials = materials.filter(search_q)
+        if debug_mode:
+            print(f"🔍 検索後の件数: {materials.count()}")
 
-        for keyword in keywords:
-            keyword_query = (
-                    Q(material_id__icontains=keyword) |
-                    Q(material_name__icontains=keyword) |
-                    Q(manufacturer__icontains=keyword) |
-                    Q(supplier__icontains=keyword) |
-                    Q(application__icontains=keyword) |
-                    Q(remarks__icontains=keyword)
-            )
-            query &= keyword_query
-
-        materials = materials.filter(query)
-
-    # フィルタ適用
+    # カテゴリフィルタ
     if category_filter:
         materials = materials.filter(material_category=category_filter)
+
+    # メーカーフィルタ
     if manufacturer_filter:
         materials = materials.filter(manufacturer__icontains=manufacturer_filter)
+
+    # 発注先フィルタ
     if supplier_filter:
         materials = materials.filter(supplier__icontains=supplier_filter)
 
-    # 価格フィルタ適用
+    # 価格フィルタ
     if price_min:
         try:
-            min_price = Decimal(price_min)
-            materials = materials.filter(unit_price__gte=min_price)
-        except:
-            pass
-    if price_max:
-        try:
-            max_price = Decimal(price_max)
-            materials = materials.filter(unit_price__lte=max_price)
-        except:
+            materials = materials.filter(unit_price__gte=Decimal(price_min))
+        except (ValueError, TypeError):
             pass
 
-    # ソート適用
-    valid_sort_fields = ['material_id', 'material_name', 'manufacturer', 'supplier',
-                         'unit_price', 'order_quantity', 'material_category', 'updated_at']
+    if price_max:
+        try:
+            materials = materials.filter(unit_price__lte=Decimal(price_max))
+        except (ValueError, TypeError):
+            pass
+
+    # ソート
+    valid_sort_fields = {
+        'material_id': 'material_id',
+        'material_name': 'material_name',
+        'manufacturer': 'manufacturer',
+        'supplier': 'supplier',
+        'unit_price': 'unit_price',
+        'order_quantity': 'order_quantity',
+        'category': 'material_category',
+        'updated': 'updated_at'
+    }
+
     if sort_by in valid_sort_fields:
+        sort_field = valid_sort_fields[sort_by]
         if sort_order == 'desc':
-            sort_field = f'-{sort_by}'
-        else:
-            sort_field = sort_by
+            sort_field = f'-{sort_field}'
         materials = materials.order_by(sort_field)
     else:
         materials = materials.order_by('material_id')
 
-    # 統計情報取得
+    # 総件数
     total_count = materials.count()
 
-    # カテゴリ統計
-    categories_with_count = []
-    all_categories = Material.objects.values_list('material_category', flat=True).distinct()
-    for category in all_categories:
-        if category:
-            count = Material.objects.filter(material_category=category).count()
-            categories_with_count.append({
-                'name': category,
-                'count': count,
-                'selected': category == category_filter
-            })
-
-    # メーカー・発注先統計
-    manufacturers = Material.objects.filter(manufacturer__isnull=False) \
-        .exclude(manufacturer='') \
-        .values_list('manufacturer', flat=True).distinct()
-    suppliers = Material.objects.filter(supplier__isnull=False) \
-        .exclude(supplier='') \
-        .values_list('supplier', flat=True).distinct()
+    if debug_mode:
+        print(f"🔍 フィルタ適用後: {total_count}件")
 
     # ページネーション
     paginator = Paginator(materials, per_page)
-    page_number = request.GET.get('page')
-    page_obj = paginator.get_page(page_number)
+    page_number = request.GET.get('page', 1)
 
-    # CSV情報取得
-    csv_loader = MaterialCSVLoader()
-    csv_summary = csv_loader.get_csv_summary()
+    try:
+        page_obj = paginator.get_page(page_number)
+    except Exception as e:
+        logger.error(f"ページネーションエラー: {e}")
+        page_obj = paginator.get_page(1)
+
+    # フィルタ用選択肢の取得
+    filter_options = get_filter_options()
+
+    # CSV情報
+    csv_info = get_csv_info()
 
     context = {
         'page_obj': page_obj,
@@ -127,60 +214,128 @@ def material_list(request):
         'sort_by': sort_by,
         'sort_order': sort_order,
         'per_page': per_page,
-        'categories_with_count': categories_with_count,
-        'manufacturers': sorted(manufacturers),
-        'suppliers': sorted(suppliers),
+        'show_inactive': show_inactive,
         'total_count': total_count,
-        'csv_summary': csv_summary,
-        'materials_in_db': Material.objects.count(),
+        'stats': stats,
+        'filter_options': filter_options,
+        'csv_info': csv_info,
         'has_filters': bool(search_query or category_filter or manufacturer_filter
                             or supplier_filter or price_min or price_max),
+        'debug_mode': debug_mode,
     }
 
+    if debug_mode:
+        context['sql_queries'] = len(connection.queries)
+        print(f"🔍 SQL クエリ数: {len(connection.queries)}")
+
     return render(request, 'materials/material_list.html', context)
+
+
+def get_filter_options():
+    """フィルタ用の選択肢を取得"""
+    cache_key = 'material_filter_options'
+    options = cache.get(cache_key)
+
+    if options is None:
+        try:
+            options = {
+                'categories': list(
+                    Material.objects.exclude(
+                        Q(material_category__isnull=True) | Q(material_category='')
+                    ).values_list('material_category', flat=True).distinct()
+                ),
+                'manufacturers': list(
+                    Material.objects.exclude(
+                        Q(manufacturer__isnull=True) | Q(manufacturer='')
+                    ).values_list('manufacturer', flat=True).distinct()
+                ),
+                'suppliers': list(
+                    Material.objects.exclude(
+                        Q(supplier__isnull=True) | Q(supplier='')
+                    ).values_list('supplier', flat=True).distinct()
+                )
+            }
+            cache.set(cache_key, options, 300)  # 5分キャッシュ
+        except Exception as e:
+            logger.error(f"フィルタ選択肢取得エラー: {e}")
+            options = {'categories': [], 'manufacturers': [], 'suppliers': []}
+
+    return options
+
+
+def get_csv_info():
+    """CSV情報を取得"""
+    try:
+        csv_loader = MaterialCSVLoader()
+        return csv_loader.get_csv_summary()
+    except Exception as e:
+        logger.error(f"CSV情報取得エラー: {e}")
+        return {'exists': False, 'error': str(e)}
 
 
 def material_detail(request, pk):
     """原料詳細ページ"""
     material = get_object_or_404(Material, pk=pk)
-    return render(request, 'materials/material_detail.html', {'material': material})
+
+    # 関連統計
+    try:
+        related_stats = {
+            'same_manufacturer_count': Material.objects.filter(
+                manufacturer=material.manufacturer
+            ).exclude(pk=material.pk).count() if material.manufacturer else 0,
+            'same_supplier_count': Material.objects.filter(
+                supplier=material.supplier
+            ).exclude(pk=material.pk).count() if material.supplier else 0,
+            'same_category_count': Material.objects.filter(
+                material_category=material.material_category
+            ).exclude(pk=material.pk).count() if material.material_category else 0,
+        }
+    except Exception as e:
+        logger.error(f"関連統計取得エラー: {e}")
+        related_stats = {
+            'same_manufacturer_count': 0,
+            'same_supplier_count': 0,
+            'same_category_count': 0,
+        }
+
+    context = {
+        'material': material,
+        'related_stats': related_stats,
+    }
+
+    return render(request, 'materials/material_detail.html', context)
 
 
 def dashboard(request):
     """ダッシュボードページ"""
-    total_materials = Material.objects.count()
-    active_materials = Material.objects.filter(is_active=True).count()
+    # 統計情報
+    stats = MaterialViewHelper.get_database_stats()
 
-    # 統計情報の追加
-    materials_with_manufacturer = Material.objects.filter(
-        manufacturer__isnull=False
-    ).exclude(manufacturer='').count()
+    # CSV情報
+    csv_info = get_csv_info()
 
-    materials_with_supplier = Material.objects.filter(
-        supplier__isnull=False
-    ).exclude(supplier='').count()
-
-    # 価格統計
+    # 最近の更新
     try:
-        from django.db.models import Avg, Min, Max
-        price_stats = Material.objects.filter(unit_price__gt=0).aggregate(
-            avg_price=Avg('unit_price'),
-            min_price=Min('unit_price'),
-            max_price=Max('unit_price')
-        )
-    except:
-        price_stats = {'avg_price': 0, 'min_price': 0, 'max_price': 0}
-
-    csv_loader = MaterialCSVLoader()
-    csv_summary = csv_loader.get_csv_summary()
+        recent_updates = Material.objects.order_by('-updated_at')[:5]
+    except Exception as e:
+        logger.error(f"最近の更新取得エラー: {e}")
+        recent_updates = []
 
     context = {
-        'total_materials': total_materials,
-        'active_materials': active_materials,
-        'materials_with_manufacturer': materials_with_manufacturer,
-        'materials_with_supplier': materials_with_supplier,
-        'price_stats': price_stats,
-        'csv_summary': csv_summary,
+        'stats': stats,
+        'csv_info': csv_info,
+        'recent_updates': recent_updates,
+        # 下位互換性のため旧形式も保持
+        'total_materials': stats['total_materials'],
+        'active_materials': stats['active_materials'],
+        'materials_with_manufacturer': stats['with_manufacturer'],
+        'materials_with_supplier': stats['with_supplier'],
+        'price_stats': {
+            'avg_price': stats['avg_price'],
+            'min_price': stats['min_price'],
+            'max_price': stats['max_price'],
+        },
+        'csv_summary': csv_info,
     }
 
     return render(request, 'materials/dashboard.html', context)
@@ -201,162 +356,76 @@ def analyze_csv_structure(request):
 
 
 def load_csv_data(request):
-    """CSVデータの読み込み（強化版）"""
+    """CSVデータの読み込み"""
     if request.method == 'POST':
         try:
-            # 事前診断
-            data_dir = os.path.join(settings.BASE_DIR, 'data')
-
-            print(f"🔍 CSV読み込み開始")
-            print(f"📁 データディレクトリ: {data_dir}")
-            print(f"📁 ディレクトリ存在: {os.path.exists(data_dir)}")
-
-            # データディレクトリ確認
-            if not os.path.exists(data_dir):
-                error_msg = f"""
-❌ データディレクトリが見つかりません
-
-📍 問題: {data_dir} が存在しません
-
-🔧 解決方法:
-1. プロジェクトのルートディレクトリで以下を実行:
-   mkdir data
-
-2. CSVファイルを data ディレクトリに配置:
-   - 原料マスタ詳細.csv
-   - または任意の原料データCSV
-
-3. ファイル配置例:
-   your_project/
-   ├── data/
-   │   └── 原料マスタ詳細.csv
-   ├── materials/
-   └── manage.py
-                """
-                messages.error(request, error_msg)
-                return redirect('materials:material_list')
-
-            # CSVファイル確認
-            csv_files = [f for f in os.listdir(data_dir) if f.endswith('.csv')]
-            print(f"📄 見つかったCSVファイル: {csv_files}")
-
-            if not csv_files:
-                error_msg = f"""
-❌ CSVファイルが見つかりません
-
-📍 問題: data ディレクトリにCSVファイルがありません
-
-🔧 解決方法:
-1. CSVファイルを data ディレクトリに配置:
-   - 推奨ファイル名: 原料マスタ詳細.csv
-   - または任意の原料データCSV
-
-2. CSVファイルの形式:
-   - 1行目: 列名（原料ID, 原料名, メーカー, 発注先など）
-   - 2行目以降: データ
-   - エンコーディング: UTF-8 または Shift_JIS
-
-3. サンプルCSV内容:
-   原料ID,原料名,メーカー,発注先,単価
-   001,小麦粉,日本製粉,商事会社,120
-   002,砂糖,三井製糖,甘味料商事,180
-                """
-                messages.error(request, error_msg)
-                return redirect('materials:material_list')
-
-            # CSV読み込み実行
             csv_loader = MaterialCSVLoader()
             result = csv_loader.load_materials()
 
-            if result['success']:
-                # 読み込み成功 - 全データを有効化
-                Material.objects.all().update(is_active=True)
+            if result.get('success'):
+                # キャッシュクリア
+                cache.delete('material_filter_options')
 
-                success_message = f"""
+                success_msg = f"""
 🎉 CSV読み込み完了！
 
 📊 処理結果:
-• 新規作成: {result['created']}件
-• 更新: {result['updated']}件
-• スキップ: {result.get('skipped', 0)}件  
-• 総行数: {result['total_rows']}行
+• 新規作成: {result.get('created', 0)}件
+• 更新: {result.get('updated', 0)}件  
+• スキップ: {result.get('skipped', 0)}件
+• 総行数: {result.get('total_rows', 0)}行
 • エンコーディング: {result.get('encoding_used', '不明')}
 
-📋 処理された列: {len(result['columns'])}列
-• {', '.join(result['columns'])}
-
-🔧 フィールドマッピング:
-• {result.get('column_mapping', {})}
-
-✅ 全ての原料データを有効化しました
+✅ データベースが正常に更新されました
                 """
 
-                # デバッグ情報を追加
-                if result.get('debug_info'):
-                    success_message += f"\n\n📄 処理例（最初の{len(result['debug_info'])}行）:"
-                    for debug in result['debug_info']:
-                        success_message += f"\n• 行{debug['row']}: {debug['material_id']} - {debug.get('material_name', '')[:30]}"
-
-                messages.success(request, success_message)
-
-                # 読み込み後の確認
-                total_after = Material.objects.count()
-                active_after = Material.objects.filter(is_active=True).count()
-                print(f"✅ 読み込み完了: 総数={total_after}, 有効={active_after}")
+                messages.success(request, success_msg)
+                logger.info(f"CSV読み込み成功: {result}")
 
             else:
-                error_message = f"""
-❌ CSV読み込みエラー
-
-📍 エラー内容: {result['error']}
-
-🔧 一般的な解決方法:
-1. CSVファイルの形式確認:
-   - 文字コード: UTF-8 または Shift_JIS
-   - 区切り文字: カンマ(,)
-   - 1行目に列名が必要
-
-2. ファイル権限確認:
-   - ファイルが読み取り可能か確認
-
-3. CSVファイル内容確認:
-   - 空ファイルでないか
-   - 文字化けしていないか
-   - 必要な列（原料ID、原料名など）があるか
-
-4. 手動確認方法:
-   python manage.py shell
-   から診断スクリプトを実行
-                """
-                messages.error(request, error_message)
-                logger.error(f"CSV読み込み失敗: {result['error']}")
+                error_msg = f"❌ CSV読み込みエラー: {result.get('error', '不明なエラー')}"
+                messages.error(request, error_msg)
+                logger.error(f"CSV読み込み失敗: {result}")
 
         except Exception as e:
-            error_message = f"""
-❌ システムエラーが発生しました
+            error_msg = f"❌ システムエラー: {str(e)}"
+            messages.error(request, error_msg)
+            logger.error(f"CSV読み込み例外: {e}", exc_info=True)
 
-📍 エラー詳細: {str(e)}
+    return redirect('materials:material_list')
 
-🔧 解決方法:
-1. サーバーを再起動:
-   python manage.py runserver
 
-2. Python環境確認:
-   - 必要なライブラリがインストールされているか
-   - pip install pandas chardet
+def bulk_update_materials(request):
+    """一括更新機能（管理者用）"""
+    if request.method == 'POST':
+        action = request.POST.get('action')
+        material_ids = request.POST.getlist('material_ids')
 
-3. 診断実行:
-   python manage.py shell で診断スクリプトを実行
+        if not material_ids:
+            messages.warning(request, "更新対象の原料を選択してください")
+            return redirect('materials:material_list')
 
-4. エラー詳細:
-   {traceback.format_exc()}
-            """
-            messages.error(request, error_message)
-            logger.error(f"CSV読み込みシステムエラー: {e}")
-            logger.error(traceback.format_exc())
+        try:
+            materials = Material.objects.filter(id__in=material_ids)
 
-    else:
-        # GET リクエストの場合は一覧ページにリダイレクト
-        messages.info(request, "CSV読み込みはPOSTリクエストで実行してください。")
+            if action == 'activate':
+                materials.update(is_active=True)
+                messages.success(request, f"{len(material_ids)}件の原料を有効化しました")
+
+            elif action == 'deactivate':
+                materials.update(is_active=False)
+                messages.success(request, f"{len(material_ids)}件の原料を無効化しました")
+
+            elif action == 'delete':
+                count = materials.count()
+                materials.delete()
+                messages.success(request, f"{count}件の原料を削除しました")
+
+            # キャッシュクリア
+            cache.delete('material_filter_options')
+
+        except Exception as e:
+            messages.error(request, f"一括更新エラー: {str(e)}")
+            logger.error(f"一括更新エラー: {e}", exc_info=True)
 
     return redirect('materials:material_list')
