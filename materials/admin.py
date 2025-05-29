@@ -5,26 +5,13 @@ from django.contrib import messages
 from django.http import HttpResponse
 from .models import Material
 from .csv_loader import MaterialCSVLoader
-import io
 import csv
-
-
-from django.contrib import admin
-from .models import Material
 
 @admin.register(Material)
 class MaterialAdmin(admin.ModelAdmin):
     list_display = (
-        'material_id', 'material_name', 'manufacturer', 'supplier', 'unit_price', 'procurement_type'
+        'material_id', 'material_name', 'manufacturer', 'supplier', 'unit_price', 'is_active', 'created_at', 'updated_at'
     )
-    search_fields = ('material_id', 'material_name', 'manufacturer', 'supplier')
-    list_filter = ('procurement_type',)
-    # 必要なら他のカラムも追加可能
-
-
-@admin.register(Material)
-class MaterialAdmin(admin.ModelAdmin):
-    list_display = ('material_id', 'material_name', 'manufacturer', 'supplier', 'unit_price', 'is_active')
     list_filter = ('is_active', 'material_category', 'manufacturer')
     search_fields = ('material_id', 'material_name', 'manufacturer', 'supplier')
     list_editable = ('is_active',)
@@ -102,19 +89,19 @@ CSV読み込み完了！
             response_content = f"分析エラー: {analysis.get('error', '不明なエラー')}"
 
         response = HttpResponse(response_content, content_type='text/plain; charset=utf-8')
-        response['Content-Disposition'] = 'attachment; filename="csv_analysis.txt"'
+        response['Content-Disposition'] = 'attachment; filename=\"csv_analysis.txt\"'
         return response
 
     def export_csv(self, request, queryset):
         """選択された原料をCSVエクスポート"""
         response = HttpResponse(content_type='text/csv; charset=utf-8')
-        response['Content-Disposition'] = 'attachment; filename="materials_export.csv"'
+        response['Content-Disposition'] = 'attachment; filename=\"materials_export.csv\"'
         response.write('\ufeff')  # BOM for Excel
 
         writer = csv.writer(response)
         writer.writerow([
-            '原料ID', '原料名', 'メーカー', '発注先', '適用', '単価', '発注量',
-            '備考', '原料区分', '有効', '作成日時', '更新日時'
+            '原料ID', '原料名', 'メーカー', '発注先', '分類', '単価', '正袋重量',
+            'ラベル用備考', '原料区分', '有効', '作成日時', '更新日時'
         ])
 
         for material in queryset:
@@ -123,14 +110,14 @@ CSV読み込み完了！
                 material.material_name,
                 material.manufacturer,
                 material.supplier,
-                material.application,
+                material.category,
                 material.unit_price,
-                material.order_quantity,
-                material.remarks,
+                material.main_bag_weight,
+                material.label_note,
                 material.material_category,
                 '有効' if material.is_active else '無効',
-                material.created_at.strftime('%Y-%m-%d %H:%M:%S'),
-                material.updated_at.strftime('%Y-%m-%d %H:%M:%S'),
+                material.created_at.strftime('%Y-%m-%d %H:%M:%S') if material.created_at else "",
+                material.updated_at.strftime('%Y-%m-%d %H:%M:%S') if material.updated_at else "",
             ])
 
         return response
@@ -150,19 +137,3 @@ CSV読み込み完了！
         self.message_user(request, f'{count}件の原料を無効化しました。')
 
     deactivate_materials.short_description = '選択された原料を無効化'
-
-
-@admin.register(Product)
-class ProductAdmin(admin.ModelAdmin):
-    list_display = ('product_id', 'product_name', 'factory', 'sales_destination', 'filling_price', 'is_active')
-    list_filter = ('is_active', 'factory')
-    search_fields = ('product_id', 'product_name', 'factory', 'sales_destination')
-    ordering = ('product_id',)
-
-
-@admin.register(Recipe)
-class RecipeAdmin(admin.ModelAdmin):
-    list_display = ('product', 'material', 'pattern', 'blend_amount_kg', 'correction_category')
-    list_filter = ('pattern', 'correction_category')
-    search_fields = ('product__product_name', 'material__material_name')
-    ordering = ('product', 'pattern', 'material')

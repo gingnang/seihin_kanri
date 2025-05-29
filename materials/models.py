@@ -1,6 +1,5 @@
 from django.db import models
 
-
 class Material(models.Model):
     label_note = models.CharField('ラベル用備考', max_length=255, blank=True, null=True)
     label_issue_count = models.CharField('ラベル発行枚数', max_length=100, blank=True, null=True)
@@ -40,6 +39,10 @@ class Material(models.Model):
     tare_weight = models.CharField('風袋重量', max_length=100, blank=True, null=True)
     unnamed_36 = models.CharField('Unnamed: 36', max_length=100, blank=True, null=True)
     unnamed_37 = models.CharField('Unnamed: 37', max_length=100, blank=True, null=True)
+
+    is_active = models.BooleanField('有効', default=True)
+    created_at = models.DateTimeField('作成日時', auto_now_add=True)
+    updated_at = models.DateTimeField('更新日時', auto_now=True)
 
     def __str__(self):
         return self.material_name or self.material_id
