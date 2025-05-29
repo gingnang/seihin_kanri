@@ -1,551 +1,60 @@
-<!DOCTYPE html>
-<html lang="ja">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ material.material_name }} - 原料詳細</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <style>
-        :root {
-            --primary-blue: #1e40af;
-            --success-green: #059669;
-            --bg-light: #f8fafc;
-        }
+{% extends "base.html" %}
+{% load static %}
+{% block extra_head %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  body, html { font-family: 'Noto Sans JP', 'メイリオ', sans-serif; background: #f6fafd; }
+  .card { border-radius: 18px; box-shadow: 0 4px 32px 0 rgba(25,118,210,0.11); margin-top: 32px; }
+  .card-header {
+    background: linear-gradient(90deg, #1976d2, #63a4ff);
+    color: #fff;
+    font-size: 1.2rem;
+    font-weight: bold;
+    letter-spacing: 0.03em;
+    border-top-left-radius: 18px !important;
+    border-top-right-radius: 18px !important;
+  }
+  .back-link { color: #1976d2; text-decoration: underline; font-weight: 500; }
+  .back-link:hover { color: #004ba0; }
+  .table th { background: #e3f0fc; width: 220px; color: #1976d2; font-weight: 600;}
+  .table td { background: #fff; }
+  @media (max-width: 800px) {
+    .table th, .table td { font-size: 0.92rem; }
+    .card { margin-top: 16px;}
+  }
+</style>
+{% endblock %}
 
-        body {
-            background-color: var(--bg-light);
-            font-family: 'Inter', sans-serif;
-        }
-
-        .navbar {
-            background-color: var(--primary-blue) !important;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
-
-        .card {
-            border: none;
-            border-radius: 12px;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-            margin-bottom: 1.5rem;
-        }
-
-        .card-header {
-            border-radius: 12px 12px 0 0 !important;
-            font-weight: 600;
-            padding: 1rem 1.5rem;
-        }
-
-        .info-table {
-            margin: 0;
-        }
-
-        .info-table tr {
-            border-bottom: 1px solid #e5e7eb;
-        }
-
-        .info-table tr:last-child {
-            border-bottom: none;
-        }
-
-        .info-table td {
-            padding: 0.75rem 1rem;
-            vertical-align: top;
-        }
-
-        .info-label {
-            font-weight: 600;
-            color: #4b5563;
-            background-color: #f9fafb;
-            width: 150px;
-            min-width: 150px;
-        }
-
-        .info-value {
-            color: #1f2937;
-        }
-
-        .material-id-display {
-            font-family: 'Monaco', 'Consolas', monospace;
-            font-size: 1.5rem;
-            font-weight: bold;
-            color: var(--primary-blue);
-            background-color: #eff6ff;
-            padding: 0.5rem 1rem;
-            border-radius: 8px;
-            display: inline-block;
-        }
-
-        .badge-large {
-            font-size: 1rem;
-            padding: 0.5rem 1rem;
-        }
-
-        .status-active {
-            background-color: var(--success-green);
-            color: white;
-        }
-
-        .status-inactive {
-            background-color: #dc2626;
-            color: white;
-        }
-
-        .value-highlight {
-            font-weight: 600;
-            color: var(--primary-blue);
-        }
-
-        .empty-value {
-            color: #9ca3af;
-            font-style: italic;
-        }
-
-        .price-display {
-            background-color: var(--success-green);
-            color: white;
-            padding: 0.5rem 1rem;
-            border-radius: 6px;
-            font-weight: 600;
-            font-size: 1.1rem;
-        }
-
-        .quantity-display {
-            background-color: #0369a1;
-            color: white;
-            padding: 0.5rem 1rem;
-            border-radius: 6px;
-            font-weight: 600;
-        }
-
-        .section-divider {
-            border-left: 4px solid var(--primary-blue);
-            padding-left: 1rem;
-            margin: 1.5rem 0;
-        }
-
-        .btn-action {
-            border-radius: 8px;
-            padding: 0.75rem 1.5rem;
-            font-weight: 500;
-            transition: all 0.2s;
-        }
-
-        .btn-action:hover {
-            transform: translateY(-1px);
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-        }
-
-        .breadcrumb-item + .breadcrumb-item::before {
-            content: ">";
-            color: #6b7280;
-        }
-
-        .timestamps {
-            font-size: 0.85rem;
-            color: #6b7280;
-        }
-
-        .long-text {
-            max-height: 150px;
-            overflow-y: auto;
-            padding: 0.5rem;
-            background-color: #f9fafb;
-            border-radius: 4px;
-            border: 1px solid #e5e7eb;
-        }
-    </style>
-</head>
-<body>
-    <!-- ナビゲーションバー -->
-    <nav class="navbar navbar-expand-lg navbar-dark">
-        <div class="container">
-            <a class="navbar-brand" href="/">
-                <i class="fas fa-industry me-2"></i>原料管理システム
-            </a>
-            <div class="navbar-nav ms-auto">
-                <a class="nav-link" href="/">
-                    <i class="fas fa-list me-1"></i>原料一覧
-                </a>
-                <a class="nav-link" href="{% url 'materials:dashboard' %}">
-                    <i class="fas fa-tachometer-alt me-1"></i>ダッシュボード
-                </a>
-                <a class="nav-link" href="/admin/">
-                    <i class="fas fa-cog me-1"></i>管理
-                </a>
-            </div>
-        </div>
-    </nav>
-
-    <div class="container mt-4">
-        <!-- パンくずナビ -->
-        <nav aria-label="breadcrumb" class="mb-3">
-            <ol class="breadcrumb">
-                <li class="breadcrumb-item"><a href="/" class="text-decoration-none">原料一覧</a></li>
-                <li class="breadcrumb-item active">{{ material.material_name }}</li>
-            </ol>
-        </nav>
-
-        <!-- ページヘッダー -->
-        <div class="row mb-4">
-            <div class="col">
-                <div class="d-flex align-items-center mb-3">
-                    <div class="me-3">
-                        <i class="fas fa-flask fa-3x text-primary"></i>
-                    </div>
-                    <div>
-                        <h1 class="h2 mb-1">{{ material.material_name }}</h1>
-                        <div class="material-id-display">ID: {{ material.material_id }}</div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="row">
-            <!-- 左カラム: 基本情報 -->
-            <div class="col-lg-8">
-                <!-- 基本情報カード -->
-                <div class="card">
-                    <div class="card-header bg-primary text-white">
-                        <i class="fas fa-info-circle me-2"></i>基本情報
-                    </div>
-                    <div class="card-body p-0">
-                        <table class="table info-table mb-0">
-                            <tr>
-                                <td class="info-label">原料ID</td>
-                                <td class="info-value">
-                                    <span class="value-highlight">{{ material.material_id }}</span>
-                                </td>
-                            </tr>
-                            <tr>
-                                <td class="info-label">原料名</td>
-                                <td class="info-value">
-                                    <strong>{{ material.material_name }}</strong>
-                                </td>
-                            </tr>
-                            <tr>
-                                <td class="info-label">メーカー</td>
-                                <td class="info-value">
-                                    {% if material.manufacturer %}
-                                    <i class="fas fa-building me-2 text-primary"></i>{{ material.manufacturer }}
-                                    {% else %}
-                                    <span class="empty-value">未設定</span>
-                                    {% endif %}
-                                </td>
-                            </tr>
-                            <tr>
-                                <td class="info-label">発注先</td>
-                                <td class="info-value">
-                                    {% if material.supplier %}
-                                    <i class="fas fa-truck me-2 text-success"></i>{{ material.supplier }}
-                                    {% else %}
-                                    <span class="empty-value">未設定</span>
-                                    {% endif %}
-                                </td>
-                            </tr>
-                            <tr>
-                                <td class="info-label">適用・用途</td>
-                                <td class="info-value">
-                                    {% if material.application %}
-                                    <i class="fas fa-box me-2 text-info"></i>{{ material.application }}
-                                    {% else %}
-                                    <span class="empty-value">未設定</span>
-                                    {% endif %}
-                                </td>
-                            </tr>
-                            <tr>
-                                <td class="info-label">原料区分</td>
-                                <td class="info-value">
-                                    <span class="badge bg-secondary badge-large">{{ material.material_category|default:"Standard" }}</span>
-                                </td>
-                            </tr>
-                        </table>
-                    </div>
-                </div>
-
-                <!-- 価格・数量情報カード -->
-                <div class="card">
-                    <div class="card-header bg-success text-white">
-                        <i class="fas fa-calculator me-2"></i>価格・数量情報
-                    </div>
-                    <div class="card-body p-0">
-                        <table class="table info-table mb-0">
-                            <tr>
-                                <td class="info-label">単価</td>
-                                <td class="info-value">
-                                    {% if material.unit_price > 0 %}
-                                    <span class="price-display">
-                                        <i class="fas fa-yen-sign me-1"></i>{{ material.unit_price|floatformat:0 }}
-                                    </span>
-                                    {% else %}
-                                    <span class="empty-value">未設定</span>
-                                    {% endif %}
-                                </td>
-                            </tr>
-                            <tr>
-                                <td class="info-label">発注量</td>
-                                <td class="info-value">
-                                    {% if material.order_quantity > 0 %}
-                                    <span class="quantity-display">
-                                        <i class="fas fa-weight me-1"></i>{{ material.order_quantity|floatformat:1 }}kg
-                                    </span>
-                                    {% else %}
-                                    <span class="empty-value">未設定</span>
-                                    {% endif %}
-                                </td>
-                            </tr>
-                            {% if material.unit_price > 0 and material.order_quantity > 0 %}
-                            <tr>
-                                <td class="info-label">1袋あたり概算価格</td>
-                                <td class="info-value">
-                                    <span class="badge bg-warning text-dark badge-large">
-                                        <i class="fas fa-calculator me-1"></i>
-                                        ¥{{ material.unit_price|mul:material.order_quantity|floatformat:0 }}
-                                    </span>
-                                </td>
-                            </tr>
-                            {% endif %}
-                        </table>
-                    </div>
-                </div>
-
-                <!-- 備考・メモカード -->
-                {% if material.remarks %}
-                <div class="card">
-                    <div class="card-header bg-info text-white">
-                        <i class="fas fa-sticky-note me-2"></i>備考・詳細情報
-                    </div>
-                    <div class="card-body">
-                        <div class="long-text">
-                            {{ material.remarks|linebreaks }}
-                        </div>
-                    </div>
-                </div>
-                {% endif %}
-            </div>
-
-            <!-- 右カラム: ステータス・管理情報 -->
-            <div class="col-lg-4">
-                <!-- ステータスカード -->
-                <div class="card">
-                    <div class="card-header bg-success text-white">
-                        <i class="fas fa-toggle-on me-2"></i>ステータス
-                    </div>
-                    <div class="card-body text-center">
-                        {% if material.is_active %}
-                        <div class="mb-3">
-                            <span class="badge status-active fs-5 px-3 py-2">
-                                <i class="fas fa-check-circle me-1"></i>有効
-                            </span>
-                        </div>
-                        <small class="text-success">この原料は現在使用可能です</small>
-                        {% else %}
-                        <div class="mb-3">
-                            <span class="badge status-inactive fs-5 px-3 py-2">
-                                <i class="fas fa-times-circle me-1"></i>無効
-                            </span>
-                        </div>
-                        <small class="text-danger">この原料は使用停止中です</small>
-                        {% endif %}
-                    </div>
-                </div>
-
-                <!-- データ完全性チェックカード -->
-                <div class="card">
-                    <div class="card-header bg-info text-white">
-                        <i class="fas fa-check-double me-2"></i>データ完全性
-                    </div>
-                    <div class="card-body p-0">
-                        <table class="table info-table mb-0">
-                            <tr>
-                                <td class="info-label">基本情報</td>
-                                <td class="info-value text-center">
-                                    <i class="fas fa-check text-success"></i>
-                                </td>
-                            </tr>
-                            <tr>
-                                <td class="info-label">メーカー情報</td>
-                                <td class="info-value text-center">
-                                    {% if material.manufacturer %}
-                                    <i class="fas fa-check text-success"></i>
-                                    {% else %}
-                                    <i class="fas fa-times text-danger"></i>
-                                    {% endif %}
-                                </td>
-                            </tr>
-                            <tr>
-                                <td class="info-label">発注先情報</td>
-                                <td class="info-value text-center">
-                                    {% if material.supplier %}
-                                    <i class="fas fa-check text-success"></i>
-                                    {% else %}
-                                    <i class="fas fa-times text-danger"></i>
-                                    {% endif %}
-                                </td>
-                            </tr>
-                            <tr>
-                                <td class="info-label">価格情報</td>
-                                <td class="info-value text-center">
-                                    {% if material.unit_price > 0 %}
-                                    <i class="fas fa-check text-success"></i>
-                                    {% else %}
-                                    <i class="fas fa-times text-danger"></i>
-                                    {% endif %}
-                                </td>
-                            </tr>
-                            <tr>
-                                <td class="info-label">数量情報</td>
-                                <td class="info-value text-center">
-                                    {% if material.order_quantity > 0 %}
-                                    <i class="fas fa-check text-success"></i>
-                                    {% else %}
-                                    <i class="fas fa-times text-danger"></i>
-                                    {% endif %}
-                                </td>
-                            </tr>
-                            <tr>
-                                <td class="info-label">備考情報</td>
-                                <td class="info-value text-center">
-                                    {% if material.remarks %}
-                                    <i class="fas fa-check text-success"></i>
-                                    {% else %}
-                                    <i class="fas fa-minus text-muted"></i>
-                                    {% endif %}
-                                </td>
-                            </tr>
-                        </table>
-                    </div>
-                </div>
-
-                <!-- システム情報カード -->
-                <div class="card">
-                    <div class="card-header bg-secondary text-white">
-                        <i class="fas fa-cog me-2"></i>システム情報
-                    </div>
-                    <div class="card-body p-0">
-                        <table class="table info-table mb-0">
-                            <tr>
-                                <td class="info-label">データベースID</td>
-                                <td class="info-value">
-                                    <code>{{ material.pk }}</code>
-                                </td>
-                            </tr>
-                            <tr>
-                                <td class="info-label">作成日時</td>
-                                <td class="info-value timestamps">
-                                    <i class="fas fa-calendar-plus me-1"></i>
-                                    {{ material.created_at|date:"Y年m月d日 H:i:s" }}
-                                </td>
-                            </tr>
-                            <tr>
-                                <td class="info-label">最終更新</td>
-                                <td class="info-value timestamps">
-                                    <i class="fas fa-calendar-alt me-1"></i>
-                                    {{ material.updated_at|date:"Y年m月d日 H:i:s" }}
-                                </td>
-                            </tr>
-                        </table>
-                    </div>
-                </div>
-
-                <!-- アクションカード -->
-                <div class="card">
-                    <div class="card-header bg-warning text-dark">
-                        <i class="fas fa-tools me-2"></i>アクション
-                    </div>
-                    <div class="card-body">
-                        <div class="d-grid gap-2">
-                            <a href="/" class="btn btn-primary btn-action">
-                                <i class="fas fa-list me-1"></i>原料一覧に戻る
-                            </a>
-                            <a href="/admin/materials/material/{{ material.pk }}/change/" class="btn btn-outline-secondary btn-action">
-                                <i class="fas fa-edit me-1"></i>編集（管理画面）
-                            </a>
-                            <button class="btn btn-outline-info btn-action" onclick="copyToClipboard()">
-                                <i class="fas fa-copy me-1"></i>情報をコピー
-                            </button>
-                            <button class="btn btn-outline-success btn-action" onclick="printPage()">
-                                <i class="fas fa-print me-1"></i>印刷
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- フル情報テーブル（印刷用・デバッグ用） -->
-        <div class="row mt-4 d-print-block">
-            <div class="col">
-                <div class="card">
-                    <div class="card-header bg-dark text-white">
-                        <i class="fas fa-database me-2"></i>全フィールド情報（デバッグ・印刷用）
-                    </div>
-                    <div class="card-body p-0">
-                        <table class="table info-table mb-0">
-                            <tr><td class="info-label">ID (pk)</td><td class="info-value">{{ material.pk }}</td></tr>
-                            <tr><td class="info-label">原料ID</td><td class="info-value">{{ material.material_id }}</td></tr>
-                            <tr><td class="info-label">原料名</td><td class="info-value">{{ material.material_name }}</td></tr>
-                            <tr><td class="info-label">メーカー</td><td class="info-value">{{ material.manufacturer|default:"(未設定)" }}</td></tr>
-                            <tr><td class="info-label">発注先</td><td class="info-value">{{ material.supplier|default:"(未設定)" }}</td></tr>
-                            <tr><td class="info-label">適用</td><td class="info-value">{{ material.application|default:"(未設定)" }}</td></tr>
-                            <tr><td class="info-label">単価</td><td class="info-value">{{ material.unit_price }}</td></tr>
-                            <tr><td class="info-label">発注量</td><td class="info-value">{{ material.order_quantity }}</td></tr>
-                            <tr><td class="info-label">備考</td><td class="info-value">{{ material.remarks|default:"(なし)" }}</td></tr>
-                            <tr><td class="info-label">原料区分</td><td class="info-value">{{ material.material_category|default:"(未設定)" }}</td></tr>
-                            <tr><td class="info-label">有効フラグ</td><td class="info-value">{{ material.is_active|yesno:"有効,無効" }}</td></tr>
-                            <tr><td class="info-label">作成日時</td><td class="info-value">{{ material.created_at }}</td></tr>
-                            <tr><td class="info-label">更新日時</td><td class="info-value">{{ material.updated_at }}</td></tr>
-                        </table>
-                    </div>
-                </div>
-            </div>
-        </div>
+{% block content %}
+<div class="container px-2 px-md-5">
+  <div class="card">
+    <div class="card-header">
+      原料詳細データ
     </div>
-
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script>
-        function copyToClipboard() {
-            const text = `原料情報
-ID: {{ material.material_id }}
-名前: {{ material.material_name }}
-メーカー: {{ material.manufacturer|default:"未設定" }}
-発注先: {{ material.supplier|default:"未設定" }}
-適用: {{ material.application|default:"未設定" }}
-単価: ¥{{ material.unit_price }}
-発注量: {{ material.order_quantity }}kg
-備考: {{ material.remarks|default:"なし" }}
-状態: {{ material.is_active|yesno:"有効,無効" }}`;
-
-            navigator.clipboard.writeText(text).then(function() {
-                const btn = event.target.closest('button');
-                const originalText = btn.innerHTML;
-                btn.innerHTML = '<i class="fas fa-check me-1"></i>コピー完了！';
-                btn.classList.replace('btn-outline-info', 'btn-success');
-
-                setTimeout(() => {
-                    btn.innerHTML = originalText;
-                    btn.classList.replace('btn-success', 'btn-outline-info');
-                }, 2000);
-            }).catch(function(err) {
-                console.error('コピーに失敗しました: ', err);
-                alert('コピーに失敗しました。手動でコピーしてください。');
-            });
-        }
-
-        function printPage() {
-            window.print();
-        }
-
-        // 印刷スタイル
-        const printStyles = `
-        <style media="print">
-            .navbar, .btn, .card-header { display: none !important; }
-            .card { border: 1px solid #000 !important; margin-bottom: 10px !important; }
-            .info-table tr { border-bottom: 1px solid #000 !important; }
-            .info-label { background-color: #f0f0f0 !important; }
-            body { font-size: 12px !important; }
-        </style>`;
-        document.head.insertAdjacentHTML('beforeend', printStyles);
-    </script>
-</body>
-</html>
+    <div class="card-body">
+      <a href="{% url 'materials:material_list' %}" class="back-link mb-2 d-inline-block">&larr; 一覧に戻る</a>
+      <table class="table table-bordered table-striped mt-2">
+        <tbody>
+        {% for field in field_data %}
+          <tr>
+            <th>{{ field.verbose_name }}</th>
+            <td>
+              {% if field.value is None or field.value == "" %}
+                -
+              {% elif field.name == "unit_price" %}
+                ¥{{ field.value|stringformat:"d" }}
+              {% elif field.name == "is_active" %}
+                {% if field.value %}有効{% else %}無効{% endif %}
+              {% else %}
+                {{ field.value }}
+              {% endif %}
+            </td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}

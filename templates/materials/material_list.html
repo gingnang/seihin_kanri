@@ -1,167 +1,161 @@
-{% extends 'base.html' %}
+{% extends "base.html" %}
 
-{% block title %}原料一覧 - デバッグ版{% endblock %}
+{% block title %}原料一覧{% endblock %}
 
 {% block content %}
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700&display=swap" rel="stylesheet">
 <style>
-    .debug-info {
-        background-color: #1a1a1a;
-        color: #00ff00;
-        padding: 1rem;
-        border-radius: 8px;
-        font-family: monospace;
-        margin-bottom: 1rem;
+    body, .table, .form-control, .form-select, .btn {
+        font-family: 'Noto Sans JP', sans-serif !important;
     }
-    .material-id {
-        font-family: monospace;
-        font-weight: bold;
-        color: #0066cc;
+    .material-table th, .material-table td {
+        vertical-align: middle !important;
+        white-space: nowrap;
+    }
+    .material-table th {
+        background: #1976d2;
+        color: #fff;
+        font-weight: 700;
+        letter-spacing: 0.03em;
+        border-bottom: 2px solid #1565c0;
+    }
+    .material-table tr {
+        background: #fff;
+        transition: background .2s;
+    }
+    .material-table tr:hover {
+        background: #e3f2fd;
+    }
+    .table-responsive {
+        border-radius: 12px;
+        box-shadow: 0 2px 12px 0 #1976d210;
+        overflow-x: auto;
+    }
+    .table thead th {
+        border-top: none;
+        border-bottom: 2px solid #1565c0;
+        font-size: 1.02rem;
+    }
+    .material-link {
+        color: #1976d2;
+        text-decoration: underline;
+        font-weight: 700;
+        transition: color .2s;
+    }
+    .material-link:hover {
+        color: #004ba0;
+    }
+    .bg-table-head {
+        background: #1976d2 !important;
+        color: #fff !important;
+    }
+    .badge {
+        font-size: .92em;
+    }
+    .search-form input, .search-form select {
+        min-width: 100px;
     }
 </style>
 
-<h2>原料一覧</h2>
-        
-        <!-- デバッグ情報 -->
-        <div class="debug-info">
-            <strong>🔍 データベース状況:</strong><br>
-            • 総件数: {{ total_in_db }}<br>
-            • 有効: {{ active_in_db }}<br>
-            • 無効: {{ inactive_in_db }}<br>
-            • 表示中: {{ total_count }}<br>
-            • 現在ページ: {{ page_obj.number }} / {{ page_obj.paginator.num_pages }}<br>
-            • ページ内件数: {{ page_obj.object_list|length }}
+<div class="container py-4">
+    <div class="mb-3">
+        <h2 class="fw-bold text-primary">原料一覧</h2>
+    </div>
+    <form method="get" class="row align-items-end g-2 search-form mb-3">
+        <div class="col-auto">
+            <input type="text" class="form-control" name="search" placeholder="検索…" value="{{ search_query }}">
         </div>
-        
-        <!-- 簡単な検索 -->
-        <div class="card mb-3">
-            <div class="card-body">
-                <form method="get" class="row g-3">
-                    <div class="col-md-4">
-                        <input type="text" class="form-control" name="search" 
-                               value="{{ search_query }}" placeholder="原料ID・名前で検索">
-                    </div>
-                    <div class="col-md-2">
-                        <select class="form-select" name="per_page">
-                            <option value="10" {% if per_page == 10 %}selected{% endif %}>10件</option>
-                            <option value="25" {% if per_page == 25 %}selected{% endif %}>25件</option>
-                            <option value="50" {% if per_page == 50 %}selected{% endif %}>50件</option>
-                            <option value="100" {% if per_page == 100 %}selected{% endif %}>100件</option>
-                        </select>
-                    </div>
-                    <div class="col-md-2">
-                        <div class="form-check mt-2">
-                            <input class="form-check-input" type="checkbox" name="show_all" value="1" 
-                                   {% if show_all %}checked{% endif %}>
-                            <label class="form-check-label">全データ表示</label>
-                        </div>
-                    </div>
-                    <div class="col-md-2">
-                        <button type="submit" class="btn btn-primary">検索</button>
-                    </div>
-                    <div class="col-md-2">
-                        <a href="{% url 'materials:material_list' %}" class="btn btn-secondary">クリア</a>
-                    </div>
-                </form>
-            </div>
+        <div class="col-auto">
+            <select class="form-select" name="per_page">
+                {% for n in per_page_choices %}
+                    <option value="{{ n }}" {% if per_page == n %}selected{% endif %}>{{ n }}件</option>
+                {% endfor %}
+            </select>
         </div>
+        <div class="col-auto">
+            <select class="form-select" name="sort">
+                <option value="material_id" {% if sort_key == "material_id" %}selected{% endif %}>原料ID順</option>
+                <option value="material_name" {% if sort_key == "material_name" %}selected{% endif %}>原料名順</option>
+                <option value="unit_price" {% if sort_key == "unit_price" %}selected{% endif %}>単価順</option>
+            </select>
+        </div>
+        <div class="col-auto">
+            <select class="form-select" name="order">
+                <option value="asc" {% if sort_order == "asc" %}selected{% endif %}>昇順</option>
+                <option value="desc" {% if sort_order == "desc" %}selected{% endif %}>降順</option>
+            </select>
+        </div>
+        <div class="col-auto">
+            <button type="submit" class="btn btn-primary">検索</button>
+        </div>
+        <div class="col-auto">
+            <a href="{% url 'materials:material_list' %}" class="btn btn-outline-secondary">クリア</a>
+        </div>
+    </form>
 
-        <!-- CSV読み込み -->
-        <div class="card mb-3">
-            <div class="card-body">
-                <form method="post" action="{% url 'materials:load_csv_data' %}">
-                    {% csrf_token %}
-                    <button type="submit" class="btn btn-success">
-                        CSV読み込み（全データ有効化）
-                    </button>
-                </form>
-            </div>
-        </div>
+    <div class="table-responsive">
+        <table class="table table-hover table-bordered material-table align-middle mb-0">
+            <thead>
+                <tr>
+                    <th>連番</th>
+                    <th>原料ID</th>
+                    <th>原料名</th>
+                    <th>使用剤形</th>
+                    <th>原料区分</th>
+                    <th>製造所</th>
+                    <th>販売者</th>
+                    <th>単価</th>
+                    <th>備考</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for material in page_obj.object_list %}
+                <tr>
+                    <td>{{ forloop.counter0|add:serial_numbers.0 }}</td>
+                    <td>
+                        <a href="{% url 'materials:material_detail' material.pk %}" class="material-link">
+                            {{ material.material_id }}
+                        </a>
+                    </td>
+                    <td>{{ material.material_name }}</td>
+                    <td>{{ material.usage_form|default:"-" }}</td>
+                    <td>{{ material.material_category|default:"-" }}</td>
+                    <td>{{ material.manufacturer|default:"-" }}</td>
+                    <td>{{ material.supplier|default:"-" }}</td>
+                    <td>
+                        {% if material.unit_price %}
+                            ¥{{ material.unit_price|default:"-" }}
+                        {% else %}
+                            -
+                        {% endif %}
+                    </td>
+                    <td>{{ material.label_note|default:"-" }}</td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="9" class="text-center text-muted">データがありません</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
 
-        <!-- データテーブル -->
-        <div class="card">
-            <div class="card-header">
-                原料データ - {{ total_count }}件
-            </div>
-            <div class="card-body">
-                {% if page_obj.object_list %}
-                <div class="table-responsive">
-                    <table class="table table-striped">
-                        <thead>
-                            <tr>
-                                <th>原料ID</th>
-                                <th>原料名</th>
-                                <th>製造所</th>
-                                <th>発注先</th>
-                                <th>単価</th>
-                                <th>状態</th>
-                                <th>操作</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for material in page_obj.object_list %}
-                            <tr>
-                                <td><span class="material-id">{{ material.material_id }}</span></td>
-                                <td>{{ material.material_name|truncatechars:40 }}</td>
-                                <td>{{ material.manufacturer|default:"-"|truncatechars:20 }}</td>
-                                <td>{{ material.supplier|default:"-"|truncatechars:20 }}</td>
-                                <td>
-                                    {% if material.unit_price > 0 %}
-                                    ¥{{ material.unit_price|floatformat:0 }}
-                                    {% else %}
-                                    -
-                                    {% endif %}
-                                </td>
-                                <td>
-                                    {% if material.is_active %}
-                                    <span class="badge bg-success">有効</span>
-                                    {% else %}
-                                    <span class="badge bg-secondary">無効</span>
-                                    {% endif %}
-                                </td>
-                                <td>
-                                    <a href="{% url 'materials:material_detail' material.pk %}" 
-                                       class="btn btn-sm btn-outline-primary">詳細</a>
-                                </td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-                {% else %}
-                <div class="alert alert-warning">
-                    <h5>⚠️ データが表示されていません</h5>
-                    <p>考えられる原因:</p>
-                    <ul>
-                        <li>データベースにデータが存在しない → CSV読み込みを実行してください</li>
-                        <li>全データがis_active=Falseになっている → 「全データ表示」をチェックして確認</li>
-                        <li>検索条件が厳しすぎる → 検索をクリアしてください</li>
-                    </ul>
-                </div>
-                {% endif %}
-            </div>
-        </div>
-
-        <!-- ページネーション -->
-        {% if page_obj.has_other_pages %}
-        <nav class="mt-3">
-            <ul class="pagination justify-content-center">
-                {% if page_obj.has_previous %}
+    {% if page_obj.has_other_pages %}
+    <nav class="mt-4">
+        <ul class="pagination justify-content-center">
+            {% if page_obj.has_previous %}
                 <li class="page-item">
-                    <a class="page-link" href="?page={{ page_obj.previous_page_number }}&search={{ search_query }}&per_page={{ per_page }}&show_all={{ show_all|yesno:'1,0' }}">前へ</a>
+                    <a class="page-link" href="?page={{ page_obj.previous_page_number }}&search={{ search_query }}&per_page={{ per_page }}&sort={{ sort_key }}&order={{ sort_order }}">前へ</a>
                 </li>
-                {% endif %}
-                
-                <li class="page-item active">
-                    <span class="page-link">{{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span>
-                </li>
-                
-                {% if page_obj.has_next %}
+            {% endif %}
+            <li class="page-item active">
+                <span class="page-link">{{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span>
+            </li>
+            {% if page_obj.has_next %}
                 <li class="page-item">
-                    <a class="page-link" href="?page={{ page_obj.next_page_number }}&search={{ search_query }}&per_page={{ per_page }}&show_all={{ show_all|yesno:'1,0' }}">次へ</a>
+                    <a class="page-link" href="?page={{ page_obj.next_page_number }}&search={{ search_query }}&per_page={{ per_page }}&sort={{ sort_key }}&order={{ sort_order }}">次へ</a>
                 </li>
-                {% endif %}
-            </ul>
-        </nav>
-        {% endif %}
-
+            {% endif %}
+        </ul>
+    </nav>
+    {% endif %}
+</div>
 {% endblock %}
