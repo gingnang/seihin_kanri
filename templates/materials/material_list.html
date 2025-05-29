@@ -1,161 +1,488 @@
 {% extends "base.html" %}
 
-{% block title %}原料一覧{% endblock %}
+{% block title %}原料一覧 | 生産管理システム{% endblock %}
 
-{% block content %}
-<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700&display=swap" rel="stylesheet">
+{% block extra_head %}
 <style>
-    body, .table, .form-control, .form-select, .btn {
-        font-family: 'Noto Sans JP', sans-serif !important;
+    .stats-row {
+        margin-bottom: 2rem;
     }
-    .material-table th, .material-table td {
-        vertical-align: middle !important;
-        white-space: nowrap;
+
+    .stats-card {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border-radius: 10px;
+        padding: 1.5rem;
+        text-align: center;
+        height: 100%;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        transition: transform 0.3s ease;
     }
-    .material-table th {
-        background: #1976d2;
-        color: #fff;
+
+    .stats-card:hover {
+        transform: translateY(-5px);
+    }
+
+    .stats-card.success {
+        background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+    }
+
+    .stats-card.warning {
+        background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    }
+
+    .stats-card.info {
+        background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+    }
+
+    .stats-number {
+        font-size: 2.5rem;
         font-weight: 700;
-        letter-spacing: 0.03em;
-        border-bottom: 2px solid #1565c0;
+        margin-bottom: 0.5rem;
+        display: block;
     }
-    .material-table tr {
+
+    .stats-label {
+        font-size: 1rem;
+        opacity: 0.9;
+        font-weight: 500;
+    }
+
+    .search-card {
         background: #fff;
-        transition: background .2s;
+        border-radius: 10px;
+        padding: 2rem;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        margin-bottom: 2rem;
     }
-    .material-table tr:hover {
-        background: #e3f2fd;
+
+    .data-table-card {
+        background: #fff;
+        border-radius: 10px;
+        overflow: hidden;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
     }
-    .table-responsive {
-        border-radius: 12px;
-        box-shadow: 0 2px 12px 0 #1976d210;
-        overflow-x: auto;
+
+    .table-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 1.5rem;
+        margin: 0;
     }
+
+    .table-title {
+        font-size: 1.25rem;
+        font-weight: 600;
+        margin: 0;
+    }
+
     .table thead th {
-        border-top: none;
-        border-bottom: 2px solid #1565c0;
-        font-size: 1.02rem;
+        background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+        color: #fff;
+        border: none;
+        font-weight: 600;
+        text-align: center;
+        padding: 1rem 0.75rem;
+        font-size: 0.9rem;
     }
+
+    .table tbody td {
+        padding: 0.75rem;
+        vertical-align: middle;
+        border-color: #e9ecef;
+    }
+
+    .table tbody tr {
+        transition: all 0.2s ease;
+    }
+
+    .table tbody tr:hover {
+        background-color: rgba(102, 126, 234, 0.1);
+        transform: translateX(5px);
+    }
+
     .material-link {
-        color: #1976d2;
-        text-decoration: underline;
-        font-weight: 700;
-        transition: color .2s;
+        color: #007bff;
+        text-decoration: none;
+        font-weight: 600;
+        transition: color 0.2s;
     }
+
     .material-link:hover {
-        color: #004ba0;
+        color: #0056b3;
+        text-decoration: underline;
     }
-    .bg-table-head {
-        background: #1976d2 !important;
-        color: #fff !important;
+
+    .badge-custom {
+        padding: 0.5rem 0.75rem;
+        border-radius: 20px;
+        font-size: 0.8rem;
+        font-weight: 500;
     }
-    .badge {
-        font-size: .92em;
+
+    .empty-state {
+        text-align: center;
+        padding: 4rem 2rem;
+        color: #6c757d;
     }
-    .search-form input, .search-form select {
-        min-width: 100px;
+
+    .empty-state i {
+        font-size: 4rem;
+        margin-bottom: 1rem;
+        opacity: 0.5;
+    }
+
+    .pagination-wrapper {
+        background: #fff;
+        border-radius: 10px;
+        padding: 1.5rem;
+        margin-top: 1.5rem;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+
+    .pagination .page-link {
+        color: #007bff;
+        border: 1px solid #dee2e6;
+        padding: 0.75rem 1rem;
+        margin: 0 0.25rem;
+        border-radius: 8px;
+        transition: all 0.2s;
+    }
+
+    .pagination .page-link:hover {
+        background-color: #e7f3ff;
+        border-color: #007bff;
+        transform: translateY(-2px);
+    }
+
+    .pagination .page-item.active .page-link {
+        background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+        border-color: #007bff;
+        box-shadow: 0 4px 10px rgba(0,123,255,0.3);
+    }
+
+    .action-buttons {
+        background: #fff;
+        border-radius: 10px;
+        padding: 1.5rem;
+        margin-top: 1.5rem;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+
+    .btn-gradient {
+        background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+        border: none;
+        color: white;
+        padding: 0.75rem 1.5rem;
+        border-radius: 8px;
+        font-weight: 500;
+        transition: all 0.3s;
+    }
+
+    .btn-gradient:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 15px rgba(40,167,69,0.4);
+        color: white;
+    }
+
+    .form-control, .form-select {
+        border-radius: 8px;
+        border: 2px solid #e9ecef;
+        padding: 0.75rem 1rem;
+        transition: all 0.2s;
+    }
+
+    .form-control:focus, .form-select:focus {
+        border-color: #667eea;
+        box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
     }
 </style>
+{% endblock %}
 
-<div class="container py-4">
-    <div class="mb-3">
-        <h2 class="fw-bold text-primary">原料一覧</h2>
+{% block content %}
+<!-- 統計カード -->
+<div class="row stats-row">
+    <div class="col-lg-3 col-md-6">
+        <div class="stats-card">
+            <span class="stats-number">{{ total_in_db|default:0 }}</span>
+            <span class="stats-label">
+                <i class="fas fa-database me-2"></i>総登録数
+            </span>
+        </div>
     </div>
-    <form method="get" class="row align-items-end g-2 search-form mb-3">
-        <div class="col-auto">
-            <input type="text" class="form-control" name="search" placeholder="検索…" value="{{ search_query }}">
+    <div class="col-lg-3 col-md-6">
+        <div class="stats-card success">
+            <span class="stats-number">{{ active_in_db|default:0 }}</span>
+            <span class="stats-label">
+                <i class="fas fa-check-circle me-2"></i>有効データ
+            </span>
         </div>
-        <div class="col-auto">
-            <select class="form-select" name="per_page">
-                {% for n in per_page_choices %}
-                    <option value="{{ n }}" {% if per_page == n %}selected{% endif %}>{{ n }}件</option>
-                {% endfor %}
-            </select>
+    </div>
+    <div class="col-lg-3 col-md-6">
+        <div class="stats-card warning">
+            <span class="stats-number">{{ total_count|default:0 }}</span>
+            <span class="stats-label">
+                <i class="fas fa-filter me-2"></i>表示中
+            </span>
         </div>
-        <div class="col-auto">
-            <select class="form-select" name="sort">
-                <option value="material_id" {% if sort_key == "material_id" %}selected{% endif %}>原料ID順</option>
-                <option value="material_name" {% if sort_key == "material_name" %}selected{% endif %}>原料名順</option>
-                <option value="unit_price" {% if sort_key == "unit_price" %}selected{% endif %}>単価順</option>
-            </select>
+    </div>
+    <div class="col-lg-3 col-md-6">
+        <div class="stats-card info">
+            <span class="stats-number">
+                {% if page_obj.paginator.num_pages %}{{ page_obj.paginator.num_pages }}{% else %}0{% endif %}
+            </span>
+            <span class="stats-label">
+                <i class="fas fa-file-alt me-2"></i>総ページ数
+            </span>
         </div>
-        <div class="col-auto">
-            <select class="form-select" name="order">
-                <option value="asc" {% if sort_order == "asc" %}selected{% endif %}>昇順</option>
-                <option value="desc" {% if sort_order == "desc" %}selected{% endif %}>降順</option>
-            </select>
-        </div>
-        <div class="col-auto">
-            <button type="submit" class="btn btn-primary">検索</button>
-        </div>
-        <div class="col-auto">
-            <a href="{% url 'materials:material_list' %}" class="btn btn-outline-secondary">クリア</a>
+    </div>
+</div>
+
+<!-- 検索・フィルター -->
+<div class="search-card">
+    <h5 class="mb-3">
+        <i class="fas fa-search me-2 text-primary"></i>検索・フィルター
+    </h5>
+    <form method="get" id="searchForm">
+        <div class="row g-3">
+            <div class="col-md-3">
+                <label class="form-label text-muted">検索キーワード</label>
+                <input type="text" class="form-control" name="search"
+                       placeholder="原料ID、原料名、製造所..."
+                       value="{{ search_query }}"
+                       onkeyup="autoSubmitSearch()">
+            </div>
+            <div class="col-md-2">
+                <label class="form-label text-muted">表示件数</label>
+                <select class="form-select" name="per_page" onchange="this.form.submit()">
+                    {% for choice in per_page_choices %}
+                        <option value="{{ choice }}" {% if per_page == choice %}selected{% endif %}>
+                            {{ choice }}件
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label text-muted">ソート項目</label>
+                <select class="form-select" name="sort" onchange="this.form.submit()">
+                    <option value="material_id" {% if sort_key == "material_id" %}selected{% endif %}>原料ID</option>
+                    <option value="material_name" {% if sort_key == "material_name" %}selected{% endif %}>原料名</option>
+                    <option value="unit_price" {% if sort_key == "unit_price" %}selected{% endif %}>単価</option>
+                    <option value="manufacturer" {% if sort_key == "manufacturer" %}selected{% endif %}>製造所</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label text-muted">並び順</label>
+                <select class="form-select" name="order" onchange="this.form.submit()">
+                    <option value="asc" {% if sort_order == "asc" %}selected{% endif %}>昇順</option>
+                    <option value="desc" {% if sort_order == "desc" %}selected{% endif %}>降順</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label text-muted">&nbsp;</label>
+                <div class="d-grid gap-2 d-md-flex">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-search me-1"></i>検索
+                    </button>
+                    <a href="{% url 'materials:material_list' %}" class="btn btn-outline-secondary">
+                        <i class="fas fa-redo me-1"></i>リセット
+                    </a>
+                </div>
+            </div>
         </div>
     </form>
+</div>
+
+<!-- データテーブル -->
+<div class="data-table-card">
+    <div class="table-header">
+        <h4 class="table-title">
+            <i class="fas fa-list me-2"></i>原料一覧
+            {% if search_query %}
+                <small class="ms-2">「{{ search_query }}」の検索結果</small>
+            {% endif %}
+        </h4>
+    </div>
 
     <div class="table-responsive">
-        <table class="table table-hover table-bordered material-table align-middle mb-0">
+        <table class="table table-hover mb-0">
             <thead>
                 <tr>
-                    <th>連番</th>
-                    <th>原料ID</th>
+                    <th style="width: 80px;">No.</th>
+                    <th style="width: 120px;">原料ID</th>
                     <th>原料名</th>
-                    <th>使用剤形</th>
-                    <th>原料区分</th>
-                    <th>製造所</th>
-                    <th>販売者</th>
-                    <th>単価</th>
+                    <th style="width: 120px;">区分</th>
+                    <th style="width: 150px;">製造所</th>
+                    <th style="width: 150px;">販売者</th>
+                    <th style="width: 100px;">単価</th>
                     <th>備考</th>
                 </tr>
             </thead>
             <tbody>
                 {% for material in page_obj.object_list %}
                 <tr>
-                    <td>{{ forloop.counter0|add:serial_numbers.0 }}</td>
+                    <td class="text-center">
+                        <strong>{{ forloop.counter0|add:serial_numbers.0 }}</strong>
+                    </td>
                     <td>
-                        <a href="{% url 'materials:material_detail' material.pk %}" class="material-link">
-                            {{ material.material_id }}
+                        <a href="{% url 'materials:material_detail' material.pk %}"
+                           class="material-link">
+                            {{ material.material_id|default:"-" }}
                         </a>
                     </td>
-                    <td>{{ material.material_name }}</td>
-                    <td>{{ material.usage_form|default:"-" }}</td>
-                    <td>{{ material.material_category|default:"-" }}</td>
-                    <td>{{ material.manufacturer|default:"-" }}</td>
-                    <td>{{ material.supplier|default:"-" }}</td>
                     <td>
-                        {% if material.unit_price %}
-                            ¥{{ material.unit_price|default:"-" }}
+                        <div>
+                            <strong>{{ material.material_name|default:"-" }}</strong>
+                            {% if material.category %}
+                                <br><small class="text-muted">{{ material.category }}</small>
+                            {% endif %}
+                        </div>
+                    </td>
+                    <td>
+                        {% if material.material_category %}
+                            <span class="badge badge-custom bg-info">{{ material.material_category }}</span>
                         {% else %}
-                            -
+                            <span class="text-muted">-</span>
                         {% endif %}
                     </td>
-                    <td>{{ material.label_note|default:"-" }}</td>
+                    <td>
+                        <span class="text-truncate d-inline-block" style="max-width: 140px;">
+                            {{ material.manufacturer|default:"-" }}
+                        </span>
+                    </td>
+                    <td>
+                        <span class="text-truncate d-inline-block" style="max-width: 140px;">
+                            {{ material.supplier|default:"-" }}
+                        </span>
+                    </td>
+                    <td class="text-end">
+                        {% if material.unit_price %}
+                            <strong class="text-success">¥{{ material.unit_price|floatformat:0 }}</strong>
+                        {% else %}
+                            <span class="text-muted">-</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <span class="text-truncate d-inline-block" style="max-width: 200px;">
+                            {{ material.label_note|default:"-" }}
+                        </span>
+                    </td>
                 </tr>
                 {% empty %}
-                <tr><td colspan="9" class="text-center text-muted">データがありません</td></tr>
+                <tr>
+                    <td colspan="8">
+                        <div class="empty-state">
+                            <i class="fas fa-inbox"></i>
+                            <h5>データがありません</h5>
+                            <p class="mb-3">
+                                {% if search_query %}
+                                    検索条件に一致するデータが見つかりませんでした。<br>
+                                    検索キーワードを変更してお試しください。
+                                {% else %}
+                                    原料データがまだ登録されていません。<br>
+                                    下記の「CSV読み込み」ボタンからデータを読み込んでください。
+                                {% endif %}
+                            </p>
+                            <button class="btn btn-gradient" onclick="loadCSV()">
+                                <i class="fas fa-upload me-2"></i>CSV読み込み
+                            </button>
+                        </div>
+                    </td>
+                </tr>
                 {% endfor %}
             </tbody>
         </table>
     </div>
+</div>
 
-    {% if page_obj.has_other_pages %}
-    <nav class="mt-4">
-        <ul class="pagination justify-content-center">
+<!-- ページネーション -->
+{% if page_obj.has_other_pages %}
+<div class="pagination-wrapper">
+    <nav aria-label="ページネーション">
+        <ul class="pagination justify-content-center mb-0">
             {% if page_obj.has_previous %}
                 <li class="page-item">
-                    <a class="page-link" href="?page={{ page_obj.previous_page_number }}&search={{ search_query }}&per_page={{ per_page }}&sort={{ sort_key }}&order={{ sort_order }}">前へ</a>
+                    <a class="page-link" href="?page=1&search={{ search_query }}&per_page={{ per_page }}&sort={{ sort_key }}&order={{ sort_order }}">
+                        <i class="fas fa-angle-double-left"></i>
+                    </a>
+                </li>
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ page_obj.previous_page_number }}&search={{ search_query }}&per_page={{ per_page }}&sort={{ sort_key }}&order={{ sort_order }}">
+                        <i class="fas fa-angle-left"></i>
+                    </a>
                 </li>
             {% endif %}
+
             <li class="page-item active">
-                <span class="page-link">{{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span>
+                <span class="page-link">
+                    {{ page_obj.number }} / {{ page_obj.paginator.num_pages }}
+                    <br><small>({{ page_obj.start_index }}-{{ page_obj.end_index }} / {{ page_obj.paginator.count }}件)</small>
+                </span>
             </li>
+
             {% if page_obj.has_next %}
                 <li class="page-item">
-                    <a class="page-link" href="?page={{ page_obj.next_page_number }}&search={{ search_query }}&per_page={{ per_page }}&sort={{ sort_key }}&order={{ sort_order }}">次へ</a>
+                    <a class="page-link" href="?page={{ page_obj.next_page_number }}&search={{ search_query }}&per_page={{ per_page }}&sort={{ sort_key }}&order={{ sort_order }}">
+                        <i class="fas fa-angle-right"></i>
+                    </a>
+                </li>
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}&search={{ search_query }}&per_page={{ per_page }}&sort={{ sort_key }}&order={{ sort_order }}">
+                        <i class="fas fa-angle-double-right"></i>
+                    </a>
                 </li>
             {% endif %}
         </ul>
     </nav>
-    {% endif %}
 </div>
+{% endif %}
+
+<!-- アクションボタン -->
+<div class="action-buttons">
+    <div class="row">
+        <div class="col-md-6">
+            <button class="btn btn-gradient me-3" onclick="loadCSV()">
+                <i class="fas fa-upload me-2"></i>CSV読み込み
+            </button>
+            <a href="{% url 'materials:dashboard' %}" class="btn btn-outline-primary">
+                <i class="fas fa-tachometer-alt me-2"></i>ダッシュボード
+            </a>
+        </div>
+        <div class="col-md-6 text-end">
+            <small class="text-muted">
+                最終更新: {% now "Y年m月d日 H:i" %}
+            </small>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // 検索フォームの自動送信（少し遅延を入れる）
+    let searchTimeout;
+    function autoSubmitSearch() {
+        clearTimeout(searchTimeout);
+        searchTimeout = setTimeout(function() {
+            // 空の場合は送信しない
+            const searchInput = document.querySelector('input[name="search"]');
+            if (searchInput.value.length >= 2 || searchInput.value.length === 0) {
+                document.getElementById('searchForm').submit();
+            }
+        }, 800);
+    }
+
+    // テーブル行のアニメーション
+    $(document).ready(function() {
+        $('.table tbody tr').hover(
+            function() {
+                $(this).find('td').addClass('bg-light');
+            },
+            function() {
+                $(this).find('td').removeClass('bg-light');
+            }
+        );
+    });
+</script>
 {% endblock %}

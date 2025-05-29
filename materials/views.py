@@ -8,89 +8,72 @@ from .models import Material
 from .csv_loader import MaterialCSVLoader
 from decimal import Decimal
 import logging
-from django.shortcuts import render
 
 logger = logging.getLogger(__name__)
 
 
-
-def top(request):
-    return render(request, 'top.html')  # top.htmlを表示
-
-
-
 def material_list(request):
-    """原料一覧ページ（問題解決重視版）"""
+    """原料一覧ページ（修正版）"""
 
-    # ⭐ まず、データベースの状況を確認
+    # データベースの状況を確認
     total_in_db = Material.objects.count()
     active_in_db = Material.objects.filter(is_active=True).count()
-    inactive_in_db = Material.objects.filter(is_active=False).count()
 
-    print(f"🔍 データベース状況確認:")
-    print(f"   総件数: {total_in_db}")
-    print(f"   有効: {active_in_db}")
-    print(f"   無効: {inactive_in_db}")
-
-    # ⭐ 問題特定: is_active=True で絞ると0件になるか？
-    if active_in_db == 0 and total_in_db > 0:
-        print("🚨 問題発見: 全データがis_active=Falseになっている！")
-        # 緊急対応: 全データを有効化
-        Material.objects.all().update(is_active=True)
-        print("✅ 全データを有効化しました")
-        active_in_db = total_in_db
-
-    # ⭐ シンプルなクエリから開始
-    show_all = request.GET.get('show_all', '0') == '1'
-    if show_all:
-        materials = Material.objects.all()
-        print("📄 全データを表示")
-    else:
-        materials = Material.objects.filter(is_active=True)
-        print(f"📄 有効データのみ表示: {materials.count()}件")
-
-    # ⭐ 検索は最低限のみ
+    # 検索クエリ
     search_query = request.GET.get('search', '').strip()
+
+    # ソート設定
+    sort_key = request.GET.get('sort', 'material_id')
+    sort_order = request.GET.get('order', 'asc')
+
+    # 有効なソートキーかチェック
+    valid_sort_keys = ['material_id', 'material_name', 'unit_price', 'manufacturer']
+    if sort_key not in valid_sort_keys:
+        sort_key = 'material_id'
+
+    # ソート順序を適用
+    if sort_order == 'desc':
+        sort_key = f'-{sort_key}'
+
+    # クエリセット構築
+    materials = Material.objects.filter(is_active=True)
+
+    # 検索フィルタ適用
     if search_query:
         materials = materials.filter(
             Q(material_id__icontains=search_query) |
-            Q(material_name__icontains=search_query)
+            Q(material_name__icontains=search_query) |
+            Q(manufacturer__icontains=search_query) |
+            Q(supplier__icontains=search_query)
         )
-        print(f"🔍 検索後: {materials.count()}件")
 
-    # ⭐ ソートも最低限
-    materials = materials.order_by('material_id')
+    # ソート適用
+    materials = materials.order_by(sort_key)
 
-    # ⭐ ページネーションも最低限
+    # ページネーション設定
+    per_page_choices = [25, 50, 100, 200]
     per_page = int(request.GET.get('per_page', 50))
+    if per_page not in per_page_choices:
+        per_page = 50
+
     paginator = Paginator(materials, per_page)
     page_number = request.GET.get('page', 1)
     page_obj = paginator.get_page(page_number)
 
-    print(f"📄 ページ情報:")
-    print(f"   現在ページ: {page_obj.number}")
-    print(f"   ページあたり: {per_page}")
-    print(f"   現在ページの件数: {len(page_obj.object_list)}")
-
-    # ⭐ データサンプルを表示（デバッグ用）
-    if page_obj.object_list:
-        first_item = page_obj.object_list[0]
-        print(f"📋 1件目のデータ例:")
-        print(f"   ID: {first_item.material_id}")
-        print(f"   名前: {first_item.material_name}")
-        print(f"   有効: {first_item.is_active}")
-    else:
-        print("❌ ページにデータがありません")
+    # シリアル番号計算
+    start_index = (page_obj.number - 1) * per_page + 1
 
     context = {
         'page_obj': page_obj,
         'search_query': search_query,
-        'show_all': show_all,
+        'sort_key': sort_key.lstrip('-'),  # ソートキーから'-'を除去
+        'sort_order': sort_order,
         'per_page': per_page,
+        'per_page_choices': per_page_choices,
         'total_in_db': total_in_db,
         'active_in_db': active_in_db,
-        'inactive_in_db': inactive_in_db,
         'total_count': materials.count(),
+        'serial_numbers': [start_index],  # シリアル番号の開始値
     }
 
     return render(request, 'materials/material_list.html', context)
@@ -99,24 +82,52 @@ def material_list(request):
 def material_detail(request, pk):
     """原料詳細ページ"""
     material = get_object_or_404(Material, pk=pk)
-    return render(request, 'materials/material_detail.html', {'material': material})
+
+    # フィールド情報を整理
+    field_data = []
+    for field in material._meta.fields:
+        if field.name not in ['id']:  # idフィールドを除外
+            field_data.append({
+                'name': field.name,
+                'verbose_name': field.verbose_name,
+                'value': getattr(material, field.name)
+            })
+
+    context = {
+        'material': material,
+        'field_data': field_data
+    }
+
+    return render(request, 'materials/material_detail.html', context)
 
 
 def dashboard(request):
-    """ダッシュボードページ（シンプル版）"""
+    """ダッシュボードページ"""
     total_materials = Material.objects.count()
     active_materials = Material.objects.filter(is_active=True).count()
+
+    # サンプルの生産実績データ（実際のデータに置き換え可能）
+    production_records = [
+        {'date': '2025-05-29', 'product_name': 'サンプル製品A', 'amount': '100kg', 'staff': '田中'},
+        {'date': '2025-05-28', 'product_name': 'サンプル製品B', 'amount': '150kg', 'staff': '佐藤'},
+        {'date': '2025-05-27', 'product_name': 'サンプル製品C', 'amount': '200kg', 'staff': '山田'},
+    ]
 
     context = {
         'total_materials': total_materials,
         'active_materials': active_materials,
+        'material_count': total_materials,
+        'production_count': 42,  # サンプル値
+        'inventory_count': 87,  # サンプル値
+        'shipment_count': 23,  # サンプル値
+        'production_records': production_records,
     }
 
     return render(request, 'materials/dashboard.html', context)
 
 
 def analyze_csv_structure(request):
-    """CSVファイル構造の分析（AJAX用）"""
+    """CSVファイル構造の分析"""
     try:
         csv_loader = MaterialCSVLoader()
         result = csv_loader.analyze_csv_structure()
@@ -126,30 +137,29 @@ def analyze_csv_structure(request):
 
 
 def load_csv_data(request):
-    """CSVデータの読み込み（シンプル版）"""
+    """CSVデータの読み込み"""
     if request.method == 'POST':
         try:
             csv_loader = MaterialCSVLoader()
             result = csv_loader.load_materials()
 
             if result.get('success'):
-                # ⭐ 読み込み後、全データを確実に有効化
+                # 読み込み後、全データを有効化
                 Material.objects.all().update(is_active=True)
 
                 success_msg = f"""
 CSV読み込み完了！
 • 新規作成: {result.get('created', 0)}件
 • 更新: {result.get('updated', 0)}件
-• 全データを有効化しました
-                """
+• 総処理行数: {result.get('total_rows', 0)}行
+• 使用エンコーディング: {result.get('encoding_used', '不明')}
+                """.strip()
                 messages.success(request, success_msg)
-
             else:
-                messages.error(request, f"読み込みエラー: {result.get('error', '不明')}")
+                messages.error(request, f"読み込みエラー: {result.get('error', '不明なエラー')}")
 
         except Exception as e:
+            logger.error(f"CSV読み込みでシステムエラー: {str(e)}")
             messages.error(request, f"システムエラー: {str(e)}")
 
     return redirect('materials:material_list')
-
-# debug_data関数は削除（不要）
