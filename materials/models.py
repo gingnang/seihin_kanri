@@ -6,7 +6,7 @@ class Material(models.Model):
     """原料マスタモデル"""
     material_id = models.CharField(max_length=50, unique=True, verbose_name="原料ID")
     material_name = models.CharField(max_length=200, verbose_name="原料名")
-    manufacturer = models.CharField(max_length=200, blank=True, verbose_name="製造所")
+    manufacturer = models.CharField(max_length=200, blank=True, verbose_name="メーカー")
     supplier = models.CharField(max_length=200, blank=True, verbose_name="発注先")
     application = models.CharField(max_length=200, blank=True, verbose_name="適用")
     unit_price = models.DecimalField(max_digits=10, decimal_places=2, default=0, verbose_name="単価")

@@ -24,7 +24,7 @@ def material_list(request):
     price_max = request.GET.get('price_max', '')
     sort_by = request.GET.get('sort', 'material_id')
     sort_order = request.GET.get('order', 'asc')
-    per_page = int(request.GET.get('per_page', 100))  # デフォルトを100件に増加
+    per_page = int(request.GET.get('per_page', 100))
 
     # 基本クエリ
     materials = Material.objects.filter(is_active=True)
@@ -205,7 +205,7 @@ def load_csv_data(request):
 📊 処理結果:
 • 新規作成: {result['created']}件
 • 更新: {result['updated']}件
-• スキップ: {result['skipped']}件  
+• スキップ: {result.get('skipped', 0)}件  
 • 総行数: {result['total_rows']}行
 • 使用エンコーディング: {result.get('encoding_used', '不明')}
 
