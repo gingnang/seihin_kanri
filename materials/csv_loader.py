@@ -34,7 +34,7 @@ class MaterialCSVLoader:
             with open(file_path, 'rb') as f:
                 raw_data = f.read(50000)
                 detected = chardet.detect(raw_data)
-                if detected['encoding'] and detected['confidence'] > 0.5:
+                if detected['encoding'] and detected['confidence'] > 0.3:
                     detected_encoding = detected['encoding']
                     if detected_encoding not in encodings_to_try:
                         encodings_to_try.insert(0, detected_encoding)
@@ -44,83 +44,155 @@ class MaterialCSVLoader:
 
         return encodings_to_try
 
+    def find_csv_files(self):
+        """利用可能なCSVファイルを検索"""
+        if not os.path.exists(self.data_dir):
+            return []
+
+        # 優先順位付きでCSVファイルを検索
+        priority_files = [
+            '原料マスタ詳細.csv',
+            'materials.csv',
+            'material_master.csv',
+            'genryou_master.csv'
+        ]
+
+        all_csv_files = [f for f in os.listdir(self.data_dir) if f.endswith('.csv')]
+
+        # 優先ファイルから順に確認
+        for priority_file in priority_files:
+            if priority_file in all_csv_files:
+                return [os.path.join(self.data_dir, priority_file)]
+
+        # 優先ファイルがない場合は全CSVファイルを返す
+        return [os.path.join(self.data_dir, f) for f in all_csv_files]
+
     def create_flexible_column_mapping(self, columns):
         """実際の列名に基づいて柔軟な列マッピングを作成"""
-        print(f"🔗 実際の列名: {columns}")
+        print(f"🔗 検出された列名: {columns}")
 
-        # 列名パターンマッチング辞書
+        # 列名パターンマッチング辞書（より包括的）
         patterns = {
-            'material_id': ['原料ID', 'ＩＤ', 'ID', 'id', 'CD', 'cd', '品番', 'コード'],
-            'material_name': ['原料名', '名前', '商品名', '品名', 'name', '製品名', '名称'],
-            'manufacturer': ['製造所', 'メーカー', 'メーカ', '製造者', '製造元', 'maker', 'manufacturer'],
-            'supplier': ['販売者', '発注先', '供給元', '供給先', '仕入先', 'supplier', '業者'],
-            'application': ['荷姿', '適用', '用途', '使用用途', '目的', 'application'],
-            'unit_price': ['単価', '価格', '値段', 'price', '金額', '単位価格'],
-            'order_quantity': ['正袋重量', '発注量', '注文量', '購入量', 'quantity', '数量', '重量'],
-            'remarks': ['備考', '品質管理備考', '注記', 'メモ', '説明', 'remarks', 'memo'],
-            'material_category': ['原料区分', '区分', '分類', 'カテゴリ', 'category', '種類']
+            'material_id': [
+                '原料ID', '原料ＩＤ', '原料id', '原料Id', 'ID', 'id', 'Id', 'iD',
+                '原料CD', '原料ＣＤ', '原料cd', '原料Cd', 'CD', 'cd', 'Cd', 'cD',
+                '原料コード', '原料番号', '原料No', '品番', '商品コード', '商品番号',
+                'material_id', 'MATERIAL_ID', 'Material_ID', 'code', 'CODE'
+            ],
+            'material_name': [
+                '原料名', '原料名称', '原料名前', '名前', '名称', '商品名', '品名',
+                '製品名', '材料名', '素材名', 'name', 'Name', 'NAME',
+                'material_name', 'MATERIAL_NAME', 'Material_Name',
+                'product_name', 'item_name'
+            ],
+            'manufacturer': [
+                '製造所', 'メーカー', 'メーカ', 'メーカー名', '製造者', '製造元',
+                '製造会社', '製造業者', '製作者', '製作会社', '会社名',
+                'maker', 'Maker', 'MAKER', 'manufacturer', 'Manufacturer',
+                'MANUFACTURER', 'company', 'Company', 'COMPANY'
+            ],
+            'supplier': [
+                '販売者', '発注先', '注文先', '供給元', '供給先', '仕入先',
+                '取引先', '納入業者', '業者', '卸業者', '商社',
+                'supplier', 'Supplier', 'SUPPLIER', 'vendor', 'Vendor'
+            ],
+            'application': [
+                '荷姿', '適用', '用途', '使用用途', '目的', '使用目的',
+                '分類', '区分', '種別', 'カテゴリ',
+                'application', 'Application', 'APPLICATION',
+                'usage', 'Usage', 'purpose', 'Purpose'
+            ],
+            'unit_price': [
+                '単価', '価格', '値段', '金額', '料金', '単位価格',
+                '売価', '定価', '標準価格', '仕入価格', '原価', '費用',
+                'price', 'Price', 'PRICE', 'unit_price', 'cost', 'Cost'
+            ],
+            'order_quantity': [
+                '正袋重量', '発注量', '注文量', '購入量', '数量', '発注数',
+                '仕入量', '入荷量', '量', '個数', '重量', '容量',
+                'quantity', 'Quantity', 'QUANTITY', 'qty', 'QTY',
+                'order_quantity', 'weight', 'amount'
+            ],
+            'remarks': [
+                '備考', '品質管理備考', '生産本部備考', 'ラベル用備考',
+                '注記', 'メモ', '説明', '補足', '詳細', 'コメント',
+                'remarks', 'Remarks', 'REMARKS', 'memo', 'Memo',
+                'note', 'Note', 'comment', 'description'
+            ],
+            'material_category': [
+                '原料区分', '区分', '分類', 'カテゴリ', '種類', '種別',
+                'category', 'Category', 'CATEGORY', 'type', 'Type',
+                'material_category', 'class', 'classification'
+            ]
         }
 
         mapping = {}
         used_columns = set()
 
+        # 完全一致を最優先
         for field, pattern_list in patterns.items():
             for col in columns:
                 if col not in used_columns:
-                    col_clean = str(col).strip()
                     for pattern in pattern_list:
-                        if pattern in col_clean or col_clean in pattern:
+                        if str(col).strip() == pattern:
                             mapping[field] = col
                             used_columns.add(col)
-                            print(f"✅ マッピング: {field} ← '{col}'")
+                            print(f"✅ 完全一致: {field} ← '{col}'")
                             break
                     if field in mapping:
                         break
 
+        # 部分一致
+        for field, pattern_list in patterns.items():
+            if field not in mapping:
+                for col in columns:
+                    if col not in used_columns:
+                        col_clean = str(col).strip().lower()
+                        for pattern in pattern_list:
+                            pattern_lower = pattern.lower()
+                            if pattern_lower in col_clean or col_clean in pattern_lower:
+                                mapping[field] = col
+                                used_columns.add(col)
+                                print(f"✅ 部分一致: {field} ← '{col}'")
+                                break
+                        if field in mapping:
+                            break
+
+        # マッピングできなかったフィールド
+        for field in patterns.keys():
             if field not in mapping:
                 print(f"⚠️ マッピング失敗: {field}")
 
         return mapping
 
     def load_materials(self):
-        """原料CSVデータの読み込み（柔軟性を向上）"""
+        """超強化版CSV読み込み"""
         try:
-            file_path = os.path.join(self.data_dir, self.csv_file)
+            # CSVファイル検索
+            csv_files = self.find_csv_files()
 
-            # ファイル存在確認
-            if not os.path.exists(file_path):
-                # 他の可能なファイル名も試行
-                possible_files = [
-                    '原料マスタ詳細.csv',
-                    'material_master.csv',
-                    'genryou_master.csv',
-                    'materials.csv'
-                ]
-
-                found_file = None
-                for filename in possible_files:
-                    test_path = os.path.join(self.data_dir, filename)
-                    if os.path.exists(test_path):
-                        found_file = test_path
-                        print(f"📄 代替ファイルを発見: {filename}")
-                        break
-
-                if found_file:
-                    file_path = found_file
+            if not csv_files:
+                # dataディレクトリ作成提案
+                if not os.path.exists(self.data_dir):
+                    try:
+                        os.makedirs(self.data_dir, exist_ok=True)
+                        return {
+                            'success': False,
+                            'error': f'dataディレクトリを作成しました: {self.data_dir}\nCSVファイルを配置してから再実行してください。'
+                        }
+                    except Exception as e:
+                        return {
+                            'success': False,
+                            'error': f'dataディレクトリの作成に失敗: {str(e)}'
+                        }
                 else:
-                    # ディレクトリ内の全CSVファイルを表示
-                    if os.path.exists(self.data_dir):
-                        csv_files = [f for f in os.listdir(self.data_dir) if f.endswith('.csv')]
-                        if csv_files:
-                            print(f"📋 利用可能なCSVファイル: {csv_files}")
-                            # 最初のCSVファイルを使用
-                            file_path = os.path.join(self.data_dir, csv_files[0])
-                            print(f"📄 自動選択: {csv_files[0]}")
-                        else:
-                            raise FileNotFoundError(f"dataディレクトリにCSVファイルが見つかりません: {self.data_dir}")
-                    else:
-                        raise FileNotFoundError(f"dataディレクトリが見つかりません: {self.data_dir}")
+                    return {
+                        'success': False,
+                        'error': f'CSVファイルが見つかりません。{self.data_dir} にCSVファイルを配置してください。'
+                    }
 
+            # 最初のCSVファイルを使用
+            file_path = csv_files[0]
             print(f"📖 読み込み対象: {file_path}")
 
             # エンコーディング検出と読み込み
@@ -130,20 +202,41 @@ class MaterialCSVLoader:
 
             for encoding in encodings:
                 try:
-                    print(f"📖 エンコーディング '{encoding}' で読み込み中...")
-                    df = pd.read_csv(file_path, encoding=encoding, dtype=str)
-                    used_encoding = encoding
-                    print(f"✅ 読み込み成功: {encoding}")
-                    break
+                    print(f"📖 エンコーディング '{encoding}' で読み込み試行...")
+
+                    # 複数の区切り文字を試行
+                    separators = [',', ';', '\t', '|']
+                    for sep in separators:
+                        try:
+                            df = pd.read_csv(file_path, encoding=encoding, dtype=str, sep=sep)
+                            if len(df.columns) > 1:  # 複数列がある場合のみ成功とみなす
+                                used_encoding = encoding
+                                print(f"✅ 読み込み成功: {encoding} (区切り文字: '{sep}')")
+                                break
+                        except:
+                            continue
+
+                    if df is not None and len(df.columns) > 1:
+                        break
+
                 except Exception as e:
-                    print(f"❌ 読み込み失敗: {encoding} - {str(e)[:50]}")
+                    print(f"❌ 読み込み失敗: {encoding} - {str(e)[:100]}")
                     continue
 
-            if df is None:
-                raise ValueError("全てのエンコーディングで読み込み失敗")
+            if df is None or len(df.columns) <= 1:
+                return {
+                    'success': False,
+                    'error': f'CSVファイルを読み込めませんでした。エンコーディング: {encodings}'
+                }
 
             # データクリーニング
             df = df.fillna('')
+
+            # 空の行を削除
+            df = df.dropna(how='all')
+
+            # 空白のみの行を削除
+            df = df[df.astype(str).apply(lambda x: x.str.strip().str.len().sum(), axis=1) > 0]
 
             print(f"\n📊 CSV情報:")
             print(f"- エンコーディング: {used_encoding}")
@@ -151,17 +244,20 @@ class MaterialCSVLoader:
             print(f"- 列数: {len(df.columns)}")
             print(f"- 列名: {list(df.columns)}")
 
+            if len(df) == 0:
+                return {
+                    'success': False,
+                    'error': 'CSVファイルにデータが含まれていません。'
+                }
+
             # 柔軟な列マッピング
             column_mapping = self.create_flexible_column_mapping(df.columns)
 
-            # 必須フィールドのチェック
+            # 必須フィールド（原料ID）の確認
             if 'material_id' not in column_mapping:
                 # 最初の列を原料IDとして使用
-                if len(df.columns) > 0:
-                    column_mapping['material_id'] = df.columns[0]
-                    print(f"⚠️ 原料ID列が見つからないため、最初の列を使用: {df.columns[0]}")
-                else:
-                    raise ValueError("原料ID列が特定できません")
+                column_mapping['material_id'] = df.columns[0]
+                print(f"⚠️ 原料ID列が見つからないため、最初の列を使用: {df.columns[0]}")
 
             results = {
                 'success': True,
@@ -182,22 +278,32 @@ class MaterialCSVLoader:
                         # 原料IDの取得（必須）
                         material_id_col = column_mapping.get('material_id')
                         material_id = self.safe_get_value(row, material_id_col, '').strip()
-                        if not material_id:
+
+                        # 原料IDが空またはインデックス的な値の場合はスキップ
+                        if not material_id or material_id.lower() in ['nan', 'null', 'none',
+                                                                      ''] or material_id.isdigit() and int(
+                                material_id) == idx:
                             results['skipped'] += 1
                             continue
 
                         # 各フィールドの値を安全に取得
+                        values = {}
+
+                        # 原料名
                         material_name_col = column_mapping.get('material_name')
-                        material_name = self.safe_get_value(row, material_name_col, f"原料_{material_id}")
+                        values['material_name'] = self.safe_get_value(row, material_name_col, f"原料_{material_id}")
 
+                        # メーカー
                         manufacturer_col = column_mapping.get('manufacturer')
-                        manufacturer = self.safe_get_value(row, manufacturer_col, '')
+                        values['manufacturer'] = self.safe_get_value(row, manufacturer_col, '')
 
+                        # 発注先
                         supplier_col = column_mapping.get('supplier')
-                        supplier = self.safe_get_value(row, supplier_col, '')
+                        values['supplier'] = self.safe_get_value(row, supplier_col, '')
 
+                        # 適用
                         application_col = column_mapping.get('application')
-                        application = self.safe_get_value(row, application_col, '')
+                        values['application'] = self.safe_get_value(row, application_col, '')
 
                         # 備考の処理（複数列から結合の可能性）
                         remarks_parts = []
@@ -214,34 +320,34 @@ class MaterialCSVLoader:
                                 if remark:
                                     remarks_parts.append(f"{col}: {remark}")
 
-                        remarks = '; '.join(remarks_parts)
+                        values['remarks'] = '; '.join(remarks_parts)
 
                         # 数値フィールドの処理
                         unit_price_col = column_mapping.get('unit_price')
-                        unit_price = self.safe_get_decimal(row, unit_price_col)
+                        values['unit_price'] = self.safe_get_decimal(row, unit_price_col)
 
                         order_quantity_col = column_mapping.get('order_quantity')
                         if order_quantity_col:
                             order_quantity_str = self.safe_get_value(row, order_quantity_col, '0')
-                            order_quantity = self.extract_numeric_from_string(order_quantity_str)
+                            values['order_quantity'] = self.extract_numeric_from_string(order_quantity_str)
                         else:
-                            order_quantity = Decimal('0')
+                            values['order_quantity'] = Decimal('0')
 
                         # 原料区分
                         category_col = column_mapping.get('material_category')
-                        material_category = self.safe_get_value(row, category_col, 'Standard')
+                        values['material_category'] = self.safe_get_value(row, category_col, 'Standard')
 
                         # デバッグ情報（最初の5行）
                         if idx < 5:
                             debug_info = {
                                 'row': idx + 1,
                                 'material_id': material_id,
-                                'material_name': material_name[:30],
-                                'manufacturer': manufacturer[:20],
-                                'supplier': supplier[:20],
-                                'unit_price': str(unit_price),
-                                'order_quantity': str(order_quantity),
-                                'category': material_category
+                                'material_name': values['material_name'][:30],
+                                'manufacturer': values['manufacturer'][:20],
+                                'supplier': values['supplier'][:20],
+                                'unit_price': str(values['unit_price']),
+                                'order_quantity': str(values['order_quantity']),
+                                'category': values['material_category']
                             }
                             results['debug_info'].append(debug_info)
 
@@ -249,14 +355,7 @@ class MaterialCSVLoader:
                         material, created = Material.objects.get_or_create(
                             material_id=material_id,
                             defaults={
-                                'material_name': material_name,
-                                'manufacturer': manufacturer,
-                                'supplier': supplier,
-                                'application': application,
-                                'unit_price': unit_price,
-                                'order_quantity': order_quantity,
-                                'remarks': remarks,
-                                'material_category': material_category,
+                                **values,
                                 'is_active': True
                             }
                         )
@@ -265,14 +364,8 @@ class MaterialCSVLoader:
                             results['created'] += 1
                         else:
                             # 既存データの更新
-                            material.material_name = material_name
-                            material.manufacturer = manufacturer
-                            material.supplier = supplier
-                            material.application = application
-                            material.unit_price = unit_price
-                            material.order_quantity = order_quantity
-                            material.remarks = remarks
-                            material.material_category = material_category
+                            for field, value in values.items():
+                                setattr(material, field, value)
                             material.is_active = True
                             material.save()
                             results['updated'] += 1
@@ -338,18 +431,12 @@ class MaterialCSVLoader:
     def analyze_csv_structure(self):
         """CSV構造の分析"""
         try:
-            file_path = os.path.join(self.data_dir, self.csv_file)
+            csv_files = self.find_csv_files()
 
-            # ファイル存在確認（他のファイルも確認）
-            if not os.path.exists(file_path) and os.path.exists(self.data_dir):
-                csv_files = [f for f in os.listdir(self.data_dir) if f.endswith('.csv')]
-                if csv_files:
-                    file_path = os.path.join(self.data_dir, csv_files[0])
-                else:
-                    return {'error': f'CSVファイルが見つかりません: {self.data_dir}'}
-            elif not os.path.exists(file_path):
-                return {'error': f'CSVファイルが見つかりません: {file_path}'}
+            if not csv_files:
+                return {'error': 'CSVファイルが見つかりません'}
 
+            file_path = csv_files[0]
             encodings = self.detect_encoding_comprehensive(file_path)
             df = None
             used_encoding = None
@@ -398,18 +485,12 @@ class MaterialCSVLoader:
 
     def get_csv_summary(self):
         """CSV概要情報の取得"""
-        file_path = os.path.join(self.data_dir, self.csv_file)
+        csv_files = self.find_csv_files()
 
-        # 他のCSVファイルも確認
-        if not os.path.exists(file_path) and os.path.exists(self.data_dir):
-            csv_files = [f for f in os.listdir(self.data_dir) if f.endswith('.csv')]
-            if csv_files:
-                file_path = os.path.join(self.data_dir, csv_files[0])
-            else:
-                return {'exists': False, 'error': 'CSVファイルが見つかりません'}
-        elif not os.path.exists(file_path):
+        if not csv_files:
             return {'exists': False, 'error': 'CSVファイルが見つかりません'}
 
+        file_path = csv_files[0]
         try:
             stat = os.stat(file_path)
             return {
