@@ -1,60 +1,889 @@
 {% extends "base.html" %}
 {% load static %}
+
+{% block title %}{{ material.material_name }} - 原料詳細{% endblock %}
+
 {% block extra_head %}
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
-<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700&display=swap" rel="stylesheet">
 <style>
-  body, html { font-family: 'Noto Sans JP', 'メイリオ', sans-serif; background: #f6fafd; }
-  .card { border-radius: 18px; box-shadow: 0 4px 32px 0 rgba(25,118,210,0.11); margin-top: 32px; }
-  .card-header {
-    background: linear-gradient(90deg, #1976d2, #63a4ff);
-    color: #fff;
-    font-size: 1.2rem;
-    font-weight: bold;
-    letter-spacing: 0.03em;
-    border-top-left-radius: 18px !important;
-    border-top-right-radius: 18px !important;
-  }
-  .back-link { color: #1976d2; text-decoration: underline; font-weight: 500; }
-  .back-link:hover { color: #004ba0; }
-  .table th { background: #e3f0fc; width: 220px; color: #1976d2; font-weight: 600;}
-  .table td { background: #fff; }
-  @media (max-width: 800px) {
-    .table th, .table td { font-size: 0.92rem; }
-    .card { margin-top: 16px;}
-  }
+    /* AdminLTE 4.0.0-beta3 統一スタイル */
+    :root {
+        --bs-primary: #007bff;
+        --bs-secondary: #6c757d;
+        --bs-success: #28a745;
+        --bs-info: #17a2b8;
+        --bs-warning: #ffc107;
+        --bs-danger: #dc3545;
+        --bs-light: #f8f9fa;
+        --bs-dark: #343a40;
+        --bs-gray-100: #f8f9fa;
+        --bs-gray-200: #e9ecef;
+        --bs-gray-300: #dee2e6;
+        --bs-gray-600: #6c757d;
+        --bs-gray-700: #495057;
+        --bs-gray-800: #343a40;
+        --bs-gray-900: #212529;
+    }
+
+    /* ページヘッダー */
+    .content-header {
+        background: var(--bs-light);
+        border-bottom: 1px solid var(--bs-gray-300);
+        margin-bottom: 1.5rem;
+    }
+
+    .page-title {
+        color: var(--bs-gray-800);
+        font-size: 1.75rem;
+        font-weight: 600;
+        margin: 0;
+        line-height: 1.2;
+    }
+
+    .page-subtitle {
+        color: var(--bs-gray-600);
+        font-size: 0.95rem;
+        margin-top: 0.25rem;
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        flex-wrap: wrap;
+    }
+
+    .subtitle-badge {
+        background: var(--bs-primary);
+        color: white;
+        padding: 0.25rem 0.75rem;
+        border-radius: 20px;
+        font-size: 0.8rem;
+        font-weight: 500;
+        display: flex;
+        align-items: center;
+        gap: 0.375rem;
+    }
+
+    /* 統計カード */
+    .stats-row {
+        margin-bottom: 1.5rem;
+    }
+
+    .stat-card {
+        background: white;
+        border: 1px solid var(--bs-gray-300);
+        border-radius: 8px;
+        padding: 1.25rem;
+        text-align: center;
+        transition: all 0.2s ease;
+        height: 100%;
+    }
+
+    .stat-card:hover {
+        border-color: var(--bs-primary);
+        box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+    }
+
+    .stat-value {
+        font-size: 1.75rem;
+        font-weight: 700;
+        color: var(--bs-primary);
+        margin-bottom: 0.25rem;
+        display: block;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+
+    .stat-label {
+        color: var(--bs-gray-600);
+        font-size: 0.875rem;
+        font-weight: 500;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .stat-value.price {
+        color: var(--bs-success);
+    }
+
+    .stat-value.active {
+        color: var(--bs-success);
+    }
+
+    .stat-value.inactive {
+        color: var(--bs-danger);
+    }
+
+    /* メインカード */
+    .info-card {
+        background: white;
+        border: 1px solid var(--bs-gray-300);
+        border-radius: 8px;
+        margin-bottom: 1.5rem;
+        overflow: hidden;
+    }
+
+    .card-header-custom {
+        background: var(--bs-primary);
+        color: white;
+        padding: 1rem 1.25rem;
+        border-bottom: 1px solid var(--bs-gray-300);
+        margin: 0;
+    }
+
+    .card-title-custom {
+        font-size: 1.1rem;
+        font-weight: 600;
+        margin: 0;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .card-body-custom {
+        padding: 0;
+    }
+
+    /* 情報テーブル */
+    .info-table {
+        width: 100%;
+        margin: 0;
+        border-collapse: collapse;
+    }
+
+    .info-table tbody tr {
+        border-bottom: 1px solid var(--bs-gray-200);
+        transition: background-color 0.15s ease;
+    }
+
+    .info-table tbody tr:hover {
+        background-color: var(--bs-gray-100);
+    }
+
+    .info-table tbody tr:last-child {
+        border-bottom: none;
+    }
+
+    .info-table th {
+        background: var(--bs-gray-100);
+        color: var(--bs-gray-700);
+        font-weight: 600;
+        text-align: left;
+        padding: 0.875rem 1rem;
+        width: 180px;
+        border-right: 1px solid var(--bs-gray-300);
+        font-size: 0.875rem;
+        vertical-align: top;
+    }
+
+    .info-table td {
+        padding: 0.875rem 1rem;
+        color: var(--bs-gray-800);
+        font-size: 0.875rem;
+        vertical-align: top;
+        word-break: break-word;
+        line-height: 1.5;
+    }
+
+    .info-table th i {
+        color: var(--bs-primary);
+        margin-right: 0.375rem;
+        width: 14px;
+        text-align: center;
+    }
+
+    /* 値の強調 */
+    .value-primary {
+        color: var(--bs-primary);
+        font-weight: 600;
+    }
+
+    .value-success {
+        color: var(--bs-success);
+        font-weight: 600;
+    }
+
+    .value-muted {
+        color: var(--bs-gray-500);
+        font-style: italic;
+    }
+
+    .price-display {
+        font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+        font-size: 1.1rem;
+        font-weight: 700;
+        color: var(--bs-success);
+    }
+
+    /* バッジ */
+    .status-badge {
+        padding: 0.375rem 0.75rem;
+        border-radius: 20px;
+        font-size: 0.8rem;
+        font-weight: 500;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .status-badge.active {
+        background: var(--bs-success);
+        color: white;
+    }
+
+    .status-badge.inactive {
+        background: var(--bs-danger);
+        color: white;
+    }
+
+    .category-badge {
+        background: var(--bs-info);
+        color: white;
+        padding: 0.25rem 0.625rem;
+        border-radius: 12px;
+        font-size: 0.75rem;
+        font-weight: 500;
+    }
+
+    /* 画像セクション */
+    .image-card {
+        background: white;
+        border: 1px solid var(--bs-gray-300);
+        border-radius: 8px;
+        overflow: hidden;
+        margin-bottom: 1.5rem;
+    }
+
+    .image-container {
+        background: var(--bs-gray-100);
+        height: 300px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        position: relative;
+    }
+
+    .material-image {
+        max-width: 90%;
+        max-height: 90%;
+        object-fit: contain;
+        border-radius: 4px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    .image-placeholder {
+        text-align: center;
+        color: var(--bs-gray-500);
+    }
+
+    .image-placeholder i {
+        font-size: 3rem;
+        margin-bottom: 0.5rem;
+        opacity: 0.6;
+    }
+
+    .image-placeholder p {
+        margin: 0;
+        font-size: 0.9rem;
+        color: var(--bs-gray-600);
+    }
+
+    /* アクションボタン */
+    .action-section {
+        background: white;
+        border: 1px solid var(--bs-gray-300);
+        border-radius: 8px;
+        padding: 1.25rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .btn-custom {
+        padding: 0.5rem 1.25rem;
+        border-radius: 6px;
+        font-weight: 500;
+        font-size: 0.875rem;
+        border: 1px solid;
+        transition: all 0.15s ease;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .btn-primary-custom {
+        background: var(--bs-primary);
+        border-color: var(--bs-primary);
+        color: white;
+    }
+
+    .btn-primary-custom:hover {
+        background: #0056b3;
+        border-color: #0056b3;
+        color: white;
+        text-decoration: none;
+    }
+
+    .btn-outline-custom {
+        background: white;
+        border-color: var(--bs-gray-400);
+        color: var(--bs-gray-700);
+    }
+
+    .btn-outline-custom:hover {
+        background: var(--bs-gray-100);
+        border-color: var(--bs-gray-500);
+        color: var(--bs-gray-800);
+        text-decoration: none;
+    }
+
+    /* セクション区切り */
+    .section-divider {
+        margin: 2rem 0 1.5rem 0;
+        text-align: center;
+        position: relative;
+    }
+
+    .section-divider::before {
+        content: '';
+        position: absolute;
+        top: 50%;
+        left: 0;
+        right: 0;
+        height: 1px;
+        background: var(--bs-gray-300);
+    }
+
+    .section-divider span {
+        background: white;
+        padding: 0 1.5rem;
+        color: var(--bs-gray-600);
+        font-weight: 600;
+        font-size: 0.9rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    /* レスポンシブ対応 */
+    @media (max-width: 992px) {
+        .row-responsive {
+            flex-direction: column;
+        }
+
+        .stats-row .col-lg-3 {
+            margin-bottom: 1rem;
+        }
+    }
+
+    @media (max-width: 768px) {
+        .page-title {
+            font-size: 1.5rem;
+        }
+
+        .page-subtitle {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 0.5rem;
+        }
+
+        .info-table th {
+            width: 140px;
+            padding: 0.75rem;
+        }
+
+        .info-table td {
+            padding: 0.75rem;
+        }
+
+        .action-section .d-flex {
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .btn-custom {
+            justify-content: center;
+        }
+    }
+
+    /* 印刷用スタイル */
+    @media print {
+        .action-section,
+        .btn-custom {
+            display: none !important;
+        }
+
+        .info-card {
+            border: 1px solid #000 !important;
+            margin-bottom: 1rem !important;
+            page-break-inside: avoid;
+        }
+
+        .card-header-custom {
+            background: #f8f9fa !important;
+            color: #000 !important;
+            border-bottom: 1px solid #000 !important;
+        }
+
+        .stat-card {
+            border: 1px solid #000 !important;
+            margin-bottom: 0.5rem !important;
+        }
+    }
+
+    /* 追加の実用性向上 */
+    .data-highlight {
+        background: #fff3cd;
+        border-left: 4px solid var(--bs-warning);
+        padding: 0.5rem;
+        margin: 0.25rem 0;
+        border-radius: 0 4px 4px 0;
+    }
+
+    .empty-value {
+        color: var(--bs-gray-400);
+        font-style: italic;
+    }
+
+    .monospace {
+        font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+        background: var(--bs-gray-100);
+        padding: 0.125rem 0.375rem;
+        border-radius: 3px;
+        font-size: 0.85rem;
+    }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="container px-2 px-md-5">
-  <div class="card">
-    <div class="card-header">
-      原料詳細データ
+<!-- ページヘッダー -->
+<div class="content-header">
+    <div class="container-fluid">
+        <div class="row">
+            <div class="col-sm-8">
+                <h1 class="page-title">{{ material.material_name|default:"原料名未設定" }}</h1>
+                <div class="page-subtitle">
+                    <span class="subtitle-badge">
+                        <i class="fas fa-tag"></i>
+                        ID: {{ material.material_id }}
+                    </span>
+                    {% if material.material_code %}
+                    <span class="subtitle-badge">
+                        <i class="fas fa-barcode"></i>
+                        {{ material.material_code }}
+                    </span>
+                    {% endif %}
+                    {% if material.material_category %}
+                    <span class="subtitle-badge">
+                        <i class="fas fa-layer-group"></i>
+                        {{ material.material_category }}
+                    </span>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="col-sm-4 text-sm-end">
+                <div class="mt-2">
+                    <a href="{% url 'materials:material_list' %}" class="btn-custom btn-outline-custom">
+                        <i class="fas fa-arrow-left"></i>
+                        一覧に戻る
+                    </a>
+                    <button class="btn-custom btn-outline-custom ms-2" onclick="window.print()">
+                        <i class="fas fa-print"></i>
+                        印刷
+                    </button>
+                </div>
+            </div>
+        </div>
     </div>
-    <div class="card-body">
-      <a href="{% url 'materials:material_list' %}" class="back-link mb-2 d-inline-block">&larr; 一覧に戻る</a>
-      <table class="table table-bordered table-striped mt-2">
-        <tbody>
-        {% for field in field_data %}
-          <tr>
-            <th>{{ field.verbose_name }}</th>
-            <td>
-              {% if field.value is None or field.value == "" %}
-                -
-              {% elif field.name == "unit_price" %}
-                ¥{{ field.value|stringformat:"d" }}
-              {% elif field.name == "is_active" %}
-                {% if field.value %}有効{% else %}無効{% endif %}
-              {% else %}
-                {{ field.value }}
-              {% endif %}
-            </td>
-          </tr>
-        {% endfor %}
-        </tbody>
-      </table>
-    </div>
-  </div>
 </div>
+
+<div class="container-fluid">
+    <!-- 統計カード -->
+    <div class="row stats-row">
+        <div class="col-lg-3 col-md-6">
+            <div class="stat-card">
+                <span class="stat-value price">
+                    {% if material.unit_price and material.unit_price != "0" %}
+                        ¥{{ material.unit_price|floatformat:0 }}
+                    {% else %}
+                        未設定
+                    {% endif %}
+                </span>
+                <span class="stat-label">単価</span>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6">
+            <div class="stat-card">
+                <span class="stat-value">{{ material.main_bag_weight|default:"未設定" }}</span>
+                <span class="stat-label">正袋重量</span>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6">
+            <div class="stat-card">
+                <span class="stat-value">{{ material.material_category|default:"通常" }}</span>
+                <span class="stat-label">原料区分</span>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6">
+            <div class="stat-card">
+                <span class="stat-value {% if material.is_active %}active{% else %}inactive{% endif %}">
+                    {% if material.is_active %}有効{% else %}無効{% endif %}
+                </span>
+                <span class="stat-label">ステータス</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="row row-responsive">
+        <!-- 基本情報 -->
+        <div class="col-lg-8">
+            <div class="info-card">
+                <div class="card-header-custom">
+                    <h3 class="card-title-custom">
+                        <i class="fas fa-info-circle"></i>
+                        基本情報
+                    </h3>
+                </div>
+                <div class="card-body-custom">
+                    <table class="info-table">
+                        <tbody>
+                            <tr>
+                                <th><i class="fas fa-tag"></i>原料名</th>
+                                <td>
+                                    {% if material.material_name %}
+                                        <span class="value-primary">{{ material.material_name }}</span>
+                                    {% else %}
+                                        <span class="empty-value">未設定</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            <tr>
+                                <th><i class="fas fa-cube"></i>商品名</th>
+                                <td>{{ material.product_name|default:"―" }}</td>
+                            </tr>
+                            <tr>
+                                <th><i class="fas fa-industry"></i>製造所</th>
+                                <td>{{ material.manufacturer|default:"―" }}</td>
+                            </tr>
+                            <tr>
+                                <th><i class="fas fa-handshake"></i>販売者</th>
+                                <td>{{ material.supplier|default:"―" }}</td>
+                            </tr>
+                            <tr>
+                                <th><i class="fas fa-sitemap"></i>分類</th>
+                                <td>
+                                    {% if material.category %}
+                                        <span class="category-badge">{{ material.category }}</span>
+                                    {% else %}―{% endif %}
+                                </td>
+                            </tr>
+                            <tr>
+                                <th><i class="fas fa-yen-sign"></i>単価</th>
+                                <td>
+                                    {% if material.unit_price and material.unit_price != "0" %}
+                                        <span class="price-display">¥{{ material.unit_price|floatformat:0 }}</span>
+                                    {% else %}
+                                        <span class="empty-value">未設定</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            <tr>
+                                <th><i class="fas fa-certificate"></i>規格</th>
+                                <td>{{ material.standard|default:"―" }}</td>
+                            </tr>
+                            <tr>
+                                <th><i class="fas fa-box"></i>荷姿</th>
+                                <td>{{ material.packaging|default:"―" }}</td>
+                            </tr>
+                            <tr>
+                                <th><i class="fas fa-weight"></i>正袋重量</th>
+                                <td>{{ material.main_bag_weight|default:"―" }}</td>
+                            </tr>
+                            <tr>
+                                <th><i class="fas fa-shopping-cart"></i>調達区分</th>
+                                <td>{{ material.procurement_type|default:"―" }}</td>
+                            </tr>
+                            <tr>
+                                <th><i class="fas fa-toggle-on"></i>ステータス</th>
+                                <td>
+                                    {% if material.is_active %}
+                                        <span class="status-badge active">有効</span>
+                                    {% else %}
+                                        <span class="status-badge inactive">無効</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- 画像セクション -->
+        <div class="col-lg-4">
+            <div class="image-card">
+                <div class="card-header-custom">
+                    <h3 class="card-title-custom">
+                        <i class="fas fa-image"></i>
+                        商品画像
+                    </h3>
+                </div>
+                <div class="image-container">
+                    {% if material.image_path and material.image_path != "" %}
+                        <img src="{{ material.image_path }}"
+                             alt="{{ material.material_name }}"
+                             class="material-image"
+                             onerror="this.parentElement.innerHTML='<div class=&quot;image-placeholder&quot;><i class=&quot;fas fa-exclamation-triangle&quot;></i><p>画像を読み込めません</p></div>'">
+                    {% else %}
+                        <div class="image-placeholder">
+                            <i class="fas fa-box-open"></i>
+                            <p>画像なし</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="section-divider">
+        <span><i class="fas fa-cogs me-2"></i>詳細仕様・品質管理</span>
+    </div>
+
+    <!-- 品質管理情報 -->
+    <div class="info-card">
+        <div class="card-header-custom">
+            <h3 class="card-title-custom">
+                <i class="fas fa-shield-alt"></i>
+                品質管理・使用情報
+            </h3>
+        </div>
+        <div class="card-body-custom">
+            <table class="info-table">
+                <tbody>
+                    <tr>
+                        <th><i class="fas fa-pills"></i>使用剤形</th>
+                        <td>{{ material.usage_form|default:"―" }}</td>
+                    </tr>
+                    <tr>
+                        <th><i class="fas fa-calendar-alt"></i>使用期限表示</th>
+                        <td>{{ material.expiry_display|default:"―" }}</td>
+                    </tr>
+                    <tr>
+                        <th><i class="fas fa-shield-check"></i>保障期間</th>
+                        <td>{{ material.guarantee_period|default:"―" }}</td>
+                    </tr>
+                    <tr>
+                        <th><i class="fas fa-balance-scale"></i>公差使用</th>
+                        <td>{{ material.tolerance_usage|default:"―" }}</td>
+                    </tr>
+                    <tr>
+                        <th><i class="fas fa-clock"></i>リテスト試験日数</th>
+                        <td>{{ material.retest_days|default:"―" }}</td>
+                    </tr>
+                    <tr>
+                        <th><i class="fas fa-check-circle"></i>受入試験後使用期限</th>
+                        <td>{{ material.post_test_expiry|default:"―" }}</td>
+                    </tr>
+                    <tr>
+                        <th><i class="fas fa-print"></i>ラベル発行枚数</th>
+                        <td>{{ material.label_issue_count|default:"―" }}</td>
+                    </tr>
+                    <tr>
+                        <th><i class="fas fa-exclamation-triangle"></i>差分警告割合</th>
+                        <td>{{ material.diff_warn_rate|default:"―" }}</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- 備考・その他情報 -->
+    <div class="info-card">
+        <div class="card-header-custom">
+            <h3 class="card-title-custom">
+                <i class="fas fa-sticky-note"></i>
+                備考・管理情報
+            </h3>
+        </div>
+        <div class="card-body-custom">
+            <table class="info-table">
+                <tbody>
+                    <tr>
+                        <th><i class="fas fa-clipboard-check"></i>品質管理備考</th>
+                        <td>{{ material.qc_note|default:"―" }}</td>
+                    </tr>
+                    <tr>
+                        <th><i class="fas fa-tag"></i>ラベル用備考</th>
+                        <td>{{ material.label_note|default:"―" }}</td>
+                    </tr>
+                    <tr>
+                        <th><i class="fas fa-building"></i>生産本部備考</th>
+                        <td>{{ material.hq_note|default:"―" }}</td>
+                    </tr>
+                    <tr>
+                        <th><i class="fas fa-globe"></i>原産国表示</th>
+                        <td>{{ material.origin_country|default:"―" }}</td>
+                    </tr>
+                    <tr>
+                        <th><i class="fas fa-weight"></i>風袋重量</th>
+                        <td>{{ material.tare_weight|default:"―" }}</td>
+                    </tr>
+                    <tr>
+                        <th><i class="fas fa-code"></i>原料コード</th>
+                        <td>
+                            {% if material.material_code %}
+                                <span class="monospace">{{ material.material_code }}</span>
+                            {% else %}―{% endif %}
+                        </td>
+                    </tr>
+                    <tr>
+                        <th><i class="fas fa-calendar-plus"></i>登録日時</th>
+                        <td>
+                            {% if material.created_at %}
+                                <span class="monospace">{{ material.created_at|date:"Y-m-d H:i:s" }}</span>
+                            {% else %}―{% endif %}
+                        </td>
+                    </tr>
+                    <tr>
+                        <th><i class="fas fa-calendar-edit"></i>更新日時</th>
+                        <td>
+                            {% if material.updated_at %}
+                                <span class="monospace">{{ material.updated_at|date:"Y-m-d H:i:s" }}</span>
+                            {% else %}―{% endif %}
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- アクションセクション -->
+    <div class="action-section">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <h6 class="mb-2 text-muted">アクション</h6>
+                <div>
+                    <a href="{% url 'materials:material_list' %}" class="btn-custom btn-primary-custom">
+                        <i class="fas fa-list"></i>
+                        原料一覧に戻る
+                    </a>
+                    <button class="btn-custom btn-outline-custom ms-2" onclick="window.print()">
+                        <i class="fas fa-print"></i>
+                        印刷
+                    </button>
+                    <a href="/admin/materials/material/{{ material.pk }}/change/"
+                       class="btn-custom btn-outline-custom ms-2"
+                       target="_blank">
+                        <i class="fas fa-edit"></i>
+                        編集
+                    </a>
+                </div>
+            </div>
+            <div class="text-muted">
+                <small>
+                    <i class="fas fa-info-circle me-1"></i>
+                    原料ID: <span class="monospace">{{ material.material_id }}</span>
+                </small>
+            </div>
+        </div>
+    </div>
+
+    <!-- 開発用情報（デバッグモード時のみ） -->
+    {% if debug %}
+    <div class="info-card">
+        <div class="card-header-custom">
+            <h3 class="card-title-custom">
+                <i class="fas fa-code"></i>
+                開発用：全フィールド情報
+            </h3>
+        </div>
+        <div class="card-body-custom" style="padding: 1rem;">
+            <div style="max-height: 400px; overflow-y: auto;">
+                <table class="table table-sm table-hover">
+                    <thead>
+                        <tr>
+                            <th style="width: 200px;">フィールド名</th>
+                            <th style="width: 200px;">表示名</th>
+                            <th>値</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for field in field_data %}
+                        <tr>
+                            <td><code class="monospace">{{ field.name }}</code></td>
+                            <td>{{ field.verbose_name }}</td>
+                            <td>
+                                {% if field.value is None or field.value == "" %}
+                                    <span class="text-muted">NULL/空</span>
+                                {% elif field.name == "unit_price" %}
+                                    <span class="price-display">¥{{ field.value|floatformat:0 }}</span>
+                                {% elif field.name == "is_active" %}
+                                    {% if field.value %}
+                                        <span class="badge bg-success">有効</span>
+                                    {% else %}
+                                        <span class="badge bg-danger">無効</span>
+                                    {% endif %}
+                                {% else %}
+                                    {{ field.value }}
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // キーボードショートカット
+    document.addEventListener('keydown', function(e) {
+        // Ctrl/Cmd + P で印刷
+        if ((e.ctrlKey || e.metaKey) && e.key === 'p') {
+            e.preventDefault();
+            window.print();
+        }
+
+        // Escキーで一覧に戻る
+        if (e.key === 'Escape') {
+            window.location.href = "{% url 'materials:material_list' %}";
+        }
+    });
+
+    // 印刷時のタイトル変更
+    const originalTitle = document.title;
+    window.addEventListener('beforeprint', function() {
+        document.title = `{{ material.material_name|default:"原料詳細" }} - ID:{{ material.material_id }}`;
+    });
+
+    window.addEventListener('afterprint', function() {
+        document.title = originalTitle;
+    });
+
+    // テーブル行のホバーエフェクト
+    document.querySelectorAll('.info-table tbody tr').forEach(row => {
+        row.addEventListener('mouseenter', function() {
+            this.style.backgroundColor = 'var(--bs-gray-100)';
+        });
+        row.addEventListener('mouseleave', function() {
+            this.style.backgroundColor = '';
+        });
+    });
+
+    // 重要な値を強調表示
+    const importantFields = ['material_name', 'unit_price', 'manufacturer', 'supplier'];
+    importantFields.forEach(fieldName => {
+        const cells = document.querySelectorAll(`[data-field="${fieldName}"]`);
+        cells.forEach(cell => {
+            if (cell.textContent.trim() && cell.textContent.trim() !== '―') {
+                cell.style.fontWeight = '600';
+                cell.style.color = 'var(--bs-primary)';
+            }
+        });
+    });
+});
+
+// エラーハンドリング
+window.addEventListener('error', function(e) {
+    if (e.filename && e.filename.includes('image')) {
+        console.warn('画像読み込みエラー:', e.filename);
+    }
+});
+</script>
 {% endblock %}

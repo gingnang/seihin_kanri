@@ -82,22 +82,22 @@
             <form method="post" enctype="multipart/form-data" id="importForm">
                 {% csrf_token %}
                 <input type="hidden" name="action" value="import">
-                
+
                 <!-- ファイル選択を表示（必須） -->
                 <div class="mb-4">
                     <label for="csv_file_import" class="form-label">
                         <strong>CSVファイルを再度選択してください:</strong>
                     </label>
-                    <input type="file" class="form-control" id="csv_file_import" name="csv_file" 
+                    <input type="file" class="form-control" id="csv_file_import" name="csv_file"
                            accept=".csv" required>
                     <div class="form-text text-danger">
                         ⚠️ 同じファイル（{{ preview_data.filename }}）を選択してください
                     </div>
                 </div>
-                
+
                 <div class="mb-4">
                     <h6>既存データの処理方法:</h6>
-                    
+
                     <!-- 更新モード -->
                     <div class="card mb-3">
                         <div class="card-body">
@@ -113,7 +113,7 @@
                             </p>
                         </div>
                     </div>
-                    
+
                     <!-- スキップモード -->
                     <div class="card mb-3">
                         <div class="card-body">
@@ -129,7 +129,7 @@
                             </p>
                         </div>
                     </div>
-                    
+
                     <!-- 置換モード -->
                     <div class="card mb-3">
                         <div class="card-body">
@@ -169,12 +169,12 @@ document.getElementById('importForm').addEventListener('submit', function() {
         alert('CSVファイルを選択してください。');
         return false;
     }
-    
+
     // 送信ボタンを無効化
     const submitBtn = document.getElementById('importBtn');
     submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>インポート中...';
     submitBtn.disabled = true;
-    
+
     // 通常のフォーム送信
     return true;
 });

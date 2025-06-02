@@ -137,3 +137,6 @@ CSV読み込み完了！
         self.message_user(request, f'{count}件の原料を無効化しました。')
 
     deactivate_materials.short_description = '選択された原料を無効化'
+
+
+

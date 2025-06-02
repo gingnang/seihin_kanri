@@ -2,7 +2,7 @@
 import pandas as pd
 import os
 from django.conf import settings
-from .models import Material, Product
+from .models import Material, Prod
 from decimal import Decimal
 import logging
 
@@ -10,7 +10,7 @@ logger = logging.getLogger(__name__)
 
 
 class CSVDataLoader:
-    """CSV Data Loader Class"""
+    """CSV Data Loader Class"""F
 
     def __init__(self):
         self.data_dir = os.path.join(settings.BASE_DIR, 'data')

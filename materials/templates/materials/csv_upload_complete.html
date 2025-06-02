@@ -1,0 +1,136 @@
+{% extends "base.html" %}
+
+{% block title %}CSVインポート{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="text-center mb-4">
+        <h2 class="text-primary">
+            <i class="fas fa-cloud-upload-alt me-2"></i>CSVファイルインポート
+        </h2>
+        <p class="text-muted">原料マスタデータを一括インポートします</p>
+    </div>
+
+    <!-- データベース状況 -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card border-primary">
+                <div class="card-body text-center">
+                    <h3 class="text-primary">{{ db_status.total_count }}</h3>
+                    <p class="text-muted mb-0">総レコード数</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card border-success">
+                <div class="card-body text-center">
+                    <h3 class="text-success">{{ db_status.active_count }}</h3>
+                    <p class="text-muted mb-0">有効レコード数</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- アップロードフォーム -->
+    <div class="card">
+        <div class="card-header bg-primary text-white">
+            <h5 class="mb-0"><i class="fas fa-file-upload me-2"></i>ステップ1: CSVファイルを選択してプレビュー</h5>
+        </div>
+        <div class="card-body">
+            <form method="post" enctype="multipart/form-data">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="preview">
+                
+                <div class="row">
+                    <div class="col-md-8">
+                        <div class="mb-3">
+                            <label for="csv_file" class="form-label">CSVファイル</label>
+                            <input type="file" class="form-control" id="csv_file" name="csv_file" 
+                                   accept=".csv" required>
+                            <div class="form-text">
+                                対応エンコーディング: CP932, Shift-JIS, UTF-8
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="mb-3">
+                            <label class="form-label">&nbsp;</label>
+                            <button type="submit" class="btn btn-info d-block w-100">
+                                <i class="fas fa-search me-2"></i>プレビュー実行
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 要件説明 -->
+    <div class="row mt-4">
+        <div class="col-md-6">
+            <div class="card h-100">
+                <div class="card-header bg-success text-white">
+                    <h6 class="mb-0"><i class="fas fa-check-circle me-2"></i>ファイル要件</h6>
+                </div>
+                <div class="card-body">
+                    <ul class="mb-0">
+                        <li>ファイル形式: CSV (.csv)</li>
+                        <li>必須列: 原料ID</li>
+                        <li>推奨列: 原料名、製造所、販売者、単価</li>
+                        <li>エンコーディング: CP932推奨</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card h-100">
+                <div class="card-header bg-info text-white">
+                    <h6 class="mb-0"><i class="fas fa-info-circle me-2"></i>処理の流れ</h6>
+                </div>
+                <div class="card-body">
+                    <ol class="mb-0">
+                        <li>CSVファイルをプレビュー</li>
+                        <li>重複データの処理方法を選択</li>
+                        <li>インポートを実行</li>
+                        <li>結果を確認</li>
+                    </ol>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ナビゲーション -->
+    <div class="text-center mt-4">
+        <a href="{% url 'materials:material_list' %}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left me-2"></i>原料一覧に戻る
+        </a>
+    </div>
+</div>
+
+<script>
+// ファイル選択時の表示
+document.getElementById('csv_file').addEventListener('change', function() {
+    const file = this.files[0];
+    if (file) {
+        const fileInfo = `選択: ${file.name} (${(file.size / 1024).toFixed(1)} KB)`;
+        
+        // 既存の情報を削除
+        const existing = document.querySelector('.file-selected-info');
+        if (existing) existing.remove();
+        
+        // ファイル情報を表示
+        const infoDiv = document.createElement('div');
+        infoDiv.className = 'alert alert-success mt-2 file-selected-info';
+        infoDiv.innerHTML = `<i class="fas fa-check me-2"></i>${fileInfo}`;
+        this.parentNode.appendChild(infoDiv);
+    }
+});
+
+// フォーム送信時の処理
+document.querySelector('form').addEventListener('submit', function() {
+    const submitBtn = document.querySelector('button[type="submit"]');
+    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>解析中...';
+    submitBtn.disabled = true;
+});
+</script>
+{% endblock %}

@@ -1,0 +1,355 @@
+{% extends "base.html" %}
+
+{% block title %}CSVインポート - 検証結果{% endblock %}
+
+{% block extra_head %}
+<style>
+    .validation-card {
+        border-radius: 10px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        margin-bottom: 2rem;
+    }
+    .validation-success {
+        border-left: 4px solid #28a745;
+        background: #f8fff9;
+    }
+    .validation-warning {
+        border-left: 4px solid #ffc107;
+        background: #fffbf0;
+    }
+    .validation-error {
+        border-left: 4px solid #dc3545;
+        background: #fff5f5;
+    }
+    .file-info-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1rem;
+        margin-bottom: 2rem;
+    }
+    .info-item {
+        background: #fff;
+        border: 1px solid #dee2e6;
+        border-radius: 8px;
+        padding: 1rem;
+        text-align: center;
+    }
+    .mode-card {
+        border: 2px solid #dee2e6;
+        border-radius: 10px;
+        padding: 1.5rem;
+        margin-bottom: 1rem;
+        transition: all 0.3s ease;
+        cursor: pointer;
+    }
+    .mode-card:hover {
+        border-color: #007bff;
+        box-shadow: 0 4px 15px rgba(0,123,255,0.2);
+    }
+    .mode-card.selected {
+        border-color: #007bff;
+        background: #f8f9fa;
+    }
+    .mode-card.recommended {
+        border-color: #28a745;
+        background: #f8fff9;
+    }
+    .duplicate-list {
+        max-height: 200px;
+        overflow-y: auto;
+        background: #f8f9fa;
+        border-radius: 5px;
+        padding: 1rem;
+    }
+    .progress-step {
+        background: #e9ecef;
+        border-radius: 20px;
+        padding: 0.5rem 1rem;
+        margin: 0 0.5rem;
+        color: #6c757d;
+    }
+    .progress-step.active {
+        background: #007bff;
+        color: white;
+    }
+    .progress-step.completed {
+        background: #28a745;
+        color: white;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <!-- プログレス表示 -->
+    <div class="text-center mb-4">
+        <div class="d-inline-flex align-items-center">
+            <span class="progress-step completed">
+                <i class="fas fa-check me-2"></i>1. ファイル選択
+            </span>
+            <i class="fas fa-arrow-right mx-2 text-muted"></i>
+            <span class="progress-step active">
+                <i class="fas fa-search me-2"></i>2. 検証・プレビュー
+            </span>
+            <i class="fas fa-arrow-right mx-2 text-muted"></i>
+            <span class="progress-step">
+                <i class="fas fa-download me-2"></i>3. インポート実行
+            </span>
+        </div>
+    </div>
+
+    <!-- メインタイトル -->
+    <div class="text-center mb-4">
+        <h2 class="text-primary mb-2">
+            <i class="fas fa-search me-2"></i>検証結果・プレビュー
+        </h2>
+        <p class="text-muted">CSVファイルの内容を確認し、インポート設定を選択してください</p>
+    </div>
+
+    <!-- ファイル情報 -->
+    <div class="validation-card validation-success">
+        <div class="card-body">
+            <h5><i class="fas fa-file-csv me-2 text-success"></i>ファイル情報</h5>
+            <div class="file-info-grid">
+                <div class="info-item">
+                    <i class="fas fa-file fa-2x text-primary mb-2"></i>
+                    <h6>{{ file_info.name }}</h6>
+                    <small class="text-muted">ファイル名</small>
+                </div>
+                <div class="info-item">
+                    <i class="fas fa-weight fa-2x text-info mb-2"></i>
+                    <h6>{{ file_info.size|filesizeformat }}</h6>
+                    <small class="text-muted">ファイルサイズ</small>
+                </div>
+                <div class="info-item">
+                    <i class="fas fa-list fa-2x text-warning mb-2"></i>
+                    <h6>{{ file_info.total_rows }}</h6>
+                    <small class="text-muted">データ行数</small>
+                </div>
+                <div class="info-item">
+                    <i class="fas fa-columns fa-2x text-success mb-2"></i>
+                    <h6>{{ file_info.columns|length }}</h6>
+                    <small class="text-muted">列数</small>
+                </div>
+                <div class="info-item">
+                    <i class="fas fa-code fa-2x text-secondary mb-2"></i>
+                    <h6>{{ file_info.encoding }}</h6>
+                    <small class="text-muted">エンコーディング</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 検証結果 -->
+    {% if validation_result.is_valid %}
+    <div class="validation-card validation-success">
+        <div class="card-body">
+            <h5><i class="fas fa-check-circle me-2 text-success"></i>検証結果: 正常</h5>
+            <p class="text-success mb-0">CSVファイルは正常に読み込み可能です。</p>
+        </div>
+    </div>
+    {% else %}
+    <div class="validation-card validation-error">
+        <div class="card-body">
+            <h5><i class="fas fa-exclamation-triangle me-2 text-danger"></i>検証エラー</h5>
+            {% for error in validation_result.errors %}
+            <div class="alert alert-danger">{{ error }}</div>
+            {% endfor %}
+            <div class="text-center mt-3">
+                <a href="{% url 'materials:upload_csv_import' %}" class="btn btn-primary">
+                    <i class="fas fa-arrow-left me-2"></i>ファイル選択に戻る
+                </a>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- 警告がある場合 -->
+    {% if validation_result.warnings %}
+    <div class="validation-card validation-warning">
+        <div class="card-body">
+            <h5><i class="fas fa-exclamation-triangle me-2 text-warning"></i>注意事項</h5>
+            {% for warning in validation_result.warnings %}
+            <div class="alert alert-warning">{{ warning }}</div>
+            {% endfor %}
+            
+            {% if validation_result.duplicate_ids %}
+            <h6>重複する原料ID:</h6>
+            <div class="duplicate-list">
+                {% for dup_id in validation_result.duplicate_ids %}
+                <span class="badge bg-warning me-1">{{ dup_id }}</span>
+                {% endfor %}
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- 列情報 -->
+    <div class="validation-card">
+        <div class="card-header">
+            <h5 class="mb-0"><i class="fas fa-table me-2"></i>検出された列</h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                {% for column in file_info.columns %}
+                <div class="col-md-3 col-sm-4 col-6 mb-2">
+                    <span class="badge bg-light text-dark border">{{ column }}</span>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    {% if validation_result.is_valid %}
+    <!-- インポート設定 -->
+    <div class="validation-card">
+        <div class="card-header">
+            <h5 class="mb-0"><i class="fas fa-cogs me-2"></i>インポート設定</h5>
+        </div>
+        <div class="card-body">
+            <form method="post" enctype="multipart/form-data" id="importForm">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="import">
+                <input type="file" name="csv_file" style="display: none;" required>
+                
+                <h6>重複データの処理方法を選択してください：</h6>
+                
+                <!-- 更新モード（推奨） -->
+                <div class="mode-card recommended" onclick="selectMode('update', this)">
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="overwrite_mode" id="mode_update" value="update" checked>
+                        <label class="form-check-label fw-bold text-success" for="mode_update">
+                            <i class="fas fa-sync-alt me-2"></i>更新モード（推奨）
+                        </label>
+                    </div>
+                    <div class="small text-muted mt-2">
+                        同じ原料IDが存在する場合は内容を更新し、存在しない場合は新規作成します。
+                        <strong>最も安全で推奨</strong>されるモードです。
+                    </div>
+                </div>
+
+                <!-- スキップモード -->
+                <div class="mode-card" onclick="selectMode('skip', this)">
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="overwrite_mode" id="mode_skip" value="skip">
+                        <label class="form-check-label fw-bold text-warning" for="mode_skip">
+                            <i class="fas fa-forward me-2"></i>スキップモード
+                        </label>
+                    </div>
+                    <div class="small text-muted mt-2">
+                        同じ原料IDが既に存在する場合はスキップし、新しいもののみを追加します。
+                        既存データを保護したい場合に使用します。
+                    </div>
+                </div>
+
+                <!-- 完全置換モード -->
+                <div class="mode-card" onclick="selectMode('replace', this)">
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="overwrite_mode" id="mode_replace" value="replace">
+                        <label class="form-check-label fw-bold text-danger" for="mode_replace">
+                            <i class="fas fa-exclamation-triangle me-2"></i>完全置換モード（注意）
+                        </label>
+                    </div>
+                    <div class="small text-muted mt-2">
+                        同じ原料IDの既存データを<strong>完全に削除</strong>してから新規作成します。
+                        <strong>注意:</strong> 既存データの内容が失われます。
+                    </div>
+                </div>
+
+                <div class="text-center mt-4">
+                    <button type="button" class="btn btn-outline-secondary me-3" onclick="goBack()">
+                        <i class="fas fa-arrow-left me-2"></i>戻る
+                    </button>
+                    <button type="submit" class="btn btn-success btn-lg" id="importBtn">
+                        <i class="fas fa-download me-2"></i>インポート実行
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+// ファイル再選択のための処理
+document.addEventListener('DOMContentLoaded', function() {
+    // 隠しファイル入力に元のファイルを設定する必要がある
+    // ブラウザのセキュリティ上、直接ファイルを設定できないため、
+    // 実際のインポート時に再度ファイル選択が必要
+});
+
+// モード選択
+function selectMode(mode, element) {
+    // 全てのカードの選択状態をクリア
+    document.querySelectorAll('.mode-card').forEach(card => {
+        card.classList.remove('selected');
+    });
+    
+    // 選択されたカードをハイライト
+    element.classList.add('selected');
+    
+    // ラジオボタンを選択
+    document.getElementById('mode_' + mode).checked = true;
+}
+
+// 初期選択状態を設定
+document.addEventListener('DOMContentLoaded', function() {
+    selectMode('update', document.querySelector('.mode-card.recommended'));
+});
+
+// 戻るボタン
+function goBack() {
+    if (confirm('ファイル選択画面に戻りますか？')) {
+        window.location.href = "{% url 'materials:upload_csv_import' %}";
+    }
+}
+
+// フォーム送信の確認
+document.getElementById('importForm').addEventListener('submit', function(e) {
+    const mode = document.querySelector('input[name="overwrite_mode"]:checked').value;
+    let confirmMessage = '';
+    
+    switch(mode) {
+        case 'update':
+            confirmMessage = '更新モードでインポートを実行しますか？\n既存データは更新され、新しいデータは追加されます。';
+            break;
+        case 'skip':
+            confirmMessage = 'スキップモードでインポートを実行しますか？\n既存データはスキップされ、新しいデータのみ追加されます。';
+            break;
+        case 'replace':
+            confirmMessage = '完全置換モードでインポートを実行しますか？\n⚠️ 警告: 同じ原料IDの既存データは削除されます！';
+            break;
+    }
+    
+    if (!confirm(confirmMessage)) {
+        e.preventDefault();
+        return false;
+    }
+    
+    // ファイル再選択ダイアログを表示
+    const fileInput = document.createElement('input');
+    fileInput.type = 'file';
+    fileInput.accept = '.csv';
+    fileInput.style.display = 'none';
+    
+    fileInput.onchange = function() {
+        if (this.files.length > 0) {
+            // 選択されたファイルをフォームに設定
+            document.querySelector('input[name="csv_file"]').files = this.files;
+            
+            // 送信ボタンを無効化して処理中表示
+            document.getElementById('importBtn').innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>インポート中...';
+            document.getElementById('importBtn').disabled = true;
+            
+            // フォームを実際に送信
+            document.getElementById('importForm').submit();
+        }
+    };
+    
+    // ファイル選択を促す
+    e.preventDefault();
+    fileInput.click();
+});
+</script>
+{% endblock %}
