@@ -196,47 +196,35 @@
         border-color: #667eea;
         box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
     }
+
+    /* 商品名・原料名の表示スタイル */
+    .product-material-cell {
+        min-width: 200px;
+    }
+
+    .product-name {
+        font-weight: 700;
+        color: #2c5aa0;
+        font-size: 0.95rem;
+        margin-bottom: 4px;
+    }
+
+    .material-name {
+        font-size: 0.85rem;
+        color: #6c757d;
+        font-weight: 500;
+    }
+
+    .category-badge {
+        font-size: 0.7rem;
+        padding: 0.2rem 0.5rem;
+        margin-top: 2px;
+        display: inline-block;
+    }
 </style>
 {% endblock %}
 
 {% block content %}
-<!-- 統計カード -->
-<div class="row stats-row">
-    <div class="col-lg-3 col-md-6">
-        <div class="stats-card">
-            <span class="stats-number">{{ total_in_db|default:0 }}</span>
-            <span class="stats-label">
-                <i class="fas fa-database me-2"></i>総登録数
-            </span>
-        </div>
-    </div>
-    <div class="col-lg-3 col-md-6">
-        <div class="stats-card success">
-            <span class="stats-number">{{ active_in_db|default:0 }}</span>
-            <span class="stats-label">
-                <i class="fas fa-check-circle me-2"></i>有効データ
-            </span>
-        </div>
-    </div>
-    <div class="col-lg-3 col-md-6">
-        <div class="stats-card warning">
-            <span class="stats-number">{{ total_count|default:0 }}</span>
-            <span class="stats-label">
-                <i class="fas fa-filter me-2"></i>表示中
-            </span>
-        </div>
-    </div>
-    <div class="col-lg-3 col-md-6">
-        <div class="stats-card info">
-            <span class="stats-number">
-                {% if page_obj.paginator.num_pages %}{{ page_obj.paginator.num_pages }}{% else %}0{% endif %}
-            </span>
-            <span class="stats-label">
-                <i class="fas fa-file-alt me-2"></i>総ページ数
-            </span>
-        </div>
-    </div>
-</div>
 
 <!-- 検索・フィルター -->
 <div class="search-card">
@@ -248,7 +236,7 @@
             <div class="col-md-3">
                 <label class="form-label text-muted">検索キーワード</label>
                 <input type="text" class="form-control" name="search"
-                       placeholder="原料ID、原料名、製造所..."
+                       placeholder="原料ID、商品名、原料名、製造所..."
                        value="{{ search_query }}"
                        onkeyup="autoSubmitSearch()">
             </div>
@@ -266,6 +254,7 @@
                 <label class="form-label text-muted">ソート項目</label>
                 <select class="form-select" name="sort" onchange="this.form.submit()">
                     <option value="material_id" {% if sort_key == "material_id" %}selected{% endif %}>原料ID</option>
+                    <option value="product_name" {% if sort_key == "product_name" %}selected{% endif %}>商品名</option>
                     <option value="material_name" {% if sort_key == "material_name" %}selected{% endif %}>原料名</option>
                     <option value="unit_price" {% if sort_key == "unit_price" %}selected{% endif %}>単価</option>
                     <option value="manufacturer" {% if sort_key == "manufacturer" %}selected{% endif %}>製造所</option>
@@ -310,7 +299,7 @@
                 <tr>
                     <th style="width: 80px;">No.</th>
                     <th style="width: 120px;">原料ID</th>
-                    <th>原料名</th>
+                    <th class="product-material-cell">商品名/原料名</th>
                     <th style="width: 120px;">区分</th>
                     <th style="width: 150px;">製造所</th>
                     <th style="width: 150px;">販売者</th>
@@ -330,13 +319,27 @@
                             {{ material.material_id|default:"-" }}
                         </a>
                     </td>
-                    <td>
-                        <div>
-                            <strong>{{ material.material_name|default:"-" }}</strong>
-                            {% if material.category %}
-                                <br><small class="text-muted">{{ material.category }}</small>
-                            {% endif %}
-                        </div>
+                    <td class="product-material-cell">
+                        <a href="{% url 'materials:material_detail' material.pk %}" class="material-link text-decoration-none">
+                            <div>
+                                <!-- 商品名を上に表示 -->
+                                <div class="product-name">
+                                    {% if material.product_name %}
+                                        {{ material.product_name }}
+                                    {% else %}
+                                        <span class="text-muted">商品名未設定</span>
+                                    {% endif %}
+                                </div>
+                                <!-- 原料名を下に表示 -->
+                                <div class="material-name">
+                                    {{ material.material_name|default:"原料名未設定" }}
+                                </div>
+                                <!-- カテゴリがある場合は小さく表示 -->
+                                {% if material.category %}
+                                    <span class="badge badge-custom bg-secondary category-badge">{{ material.category }}</span>
+                                {% endif %}
+                            </div>
+                        </a>
                     </td>
                     <td>
                         {% if material.material_category %}
@@ -346,12 +349,12 @@
                         {% endif %}
                     </td>
                     <td>
-                        <span class="text-truncate d-inline-block" style="max-width: 140px;">
+                        <span class="text-truncate d-inline-block" style="max-width: 140px;" title="{{ material.manufacturer|default:'-' }}">
                             {{ material.manufacturer|default:"-" }}
                         </span>
                     </td>
                     <td>
-                        <span class="text-truncate d-inline-block" style="max-width: 140px;">
+                        <span class="text-truncate d-inline-block" style="max-width: 140px;" title="{{ material.supplier|default:'-' }}">
                             {{ material.supplier|default:"-" }}
                         </span>
                     </td>
@@ -363,7 +366,7 @@
                         {% endif %}
                     </td>
                     <td>
-                        <span class="text-truncate d-inline-block" style="max-width: 200px;">
+                        <span class="text-truncate d-inline-block" style="max-width: 200px;" title="{{ material.label_note|default:'-' }}">
                             {{ material.label_note|default:"-" }}
                         </span>
                     </td>
@@ -484,5 +487,12 @@
             }
         );
     });
+
+    // CSV読み込み関数
+    function loadCSV() {
+        if (confirm('CSVファイルからデータを読み込みますか？')) {
+            window.location.href = "{% url 'materials:load_csv_data' %}";
+        }
+    }
 </script>
 {% endblock %}

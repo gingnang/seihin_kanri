@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+# materials/csv_loader.py - 画像パス正規化対応版
 import pandas as pd
 import os
 from django.conf import settings
@@ -16,6 +16,35 @@ class MaterialCSVLoader:
     def __init__(self):
         self.data_dir = os.path.join(settings.BASE_DIR, 'data')
         self.csv_file = '原料マスタ詳細.csv'
+
+    def normalize_image_path(self, image_path):
+        """
+        画像パスを正規化する関数
+
+        入力例: "images\1.jpg" または "images\\1.jpg"
+        出力例: "images/1.jpg"
+        """
+        if not image_path or pd.isna(image_path) or image_path == '':
+            return ''
+
+        # 文字列に変換
+        path = str(image_path).strip()
+
+        # 空文字チェック
+        if not path:
+            return ''
+
+        # バックスラッシュをフォワードスラッシュに変換
+        path = path.replace('\\', '/')
+
+        # 複数のスラッシュを単一のスラッシュに変換
+        path = re.sub(r'/+', '/', path)
+
+        # 先頭のスラッシュを除去
+        path = path.lstrip('/')
+
+        print(f"画像パス正規化: '{image_path}' → '{path}'")
+        return path
 
     def detect_encoding_comprehensive(self, file_path):
         encodings_to_try = ['cp932', 'shift_jis', 'utf-8', 'utf-8-sig']
@@ -65,6 +94,10 @@ class MaterialCSVLoader:
                 mapping['usage_form'] = col
             if col == '規格':
                 mapping['standard'] = col
+            if col == '商品名':  # 商品名の追加
+                mapping['product_name'] = col
+            if col == '画像パス':  # 画像パスの追加
+                mapping['image_path'] = col
         return mapping
 
     def clean_and_convert_value(self, value, field_name=''):
@@ -73,6 +106,10 @@ class MaterialCSVLoader:
             return ''
 
         value_str = str(value).strip()
+
+        # 画像パスの特別処理
+        if field_name == 'image_path':
+            return self.normalize_image_path(value_str)
 
         # 数値フィールドの処理
         if field_name in ['unit_price', 'main_bag_weight']:
@@ -109,8 +146,10 @@ class MaterialCSVLoader:
                 try:
                     df = pd.read_csv(file_path, encoding=encoding, dtype=str)
                     used_encoding = encoding
+                    print(f"CSVファイルを {encoding} で読み込み成功")
                     break
-                except Exception:
+                except Exception as e:
+                    print(f"エンコーディング {encoding} で読み込み失敗: {e}")
                     continue
 
             if df is None:
@@ -126,6 +165,9 @@ class MaterialCSVLoader:
             updated = 0
             skipped = 0
             errors = []
+            image_path_processed = 0
+
+            print(f"データ処理開始: {len(df)}行")
 
             with transaction.atomic():
                 for idx, row in df.iterrows():
@@ -139,7 +181,13 @@ class MaterialCSVLoader:
                         values = {}
                         for field, col in mapping.items():
                             if field != 'material_id':
-                                values[field] = self.clean_and_convert_value(row[col], field)
+                                cleaned_value = self.clean_and_convert_value(row[col], field)
+                                values[field] = cleaned_value
+
+                                # 画像パス処理のログ
+                                if field == 'image_path' and cleaned_value:
+                                    image_path_processed += 1
+                                    print(f"画像パス処理 {image_path_processed}: {row[col]} → {cleaned_value}")
 
                         # 上書きモード処理
                         if overwrite_mode == 'update':
@@ -170,14 +218,16 @@ class MaterialCSVLoader:
                                 created += 1
 
                     except Exception as e:
-                        errors.append(f"行{idx + 1}: {str(e)}")
+                        error_msg = f"行{idx + 1}: {str(e)}"
+                        errors.append(error_msg)
+                        print(f"エラー: {error_msg}")
                         skipped += 1
                         continue
 
             # 全データを有効化
             Material.objects.all().update(is_active=True)
 
-            return {
+            result = {
                 'success': True,
                 'created': created,
                 'updated': updated,
@@ -186,11 +236,17 @@ class MaterialCSVLoader:
                 'encoding_used': used_encoding,
                 'columns': list(df.columns),
                 'overwrite_mode': overwrite_mode,
-                'errors': errors[:5] if errors else []
+                'errors': errors[:5] if errors else [],
+                'image_paths_processed': image_path_processed
             }
 
+            print(f"処理完了: 作成{created}, 更新{updated}, スキップ{skipped}, 画像パス処理{image_path_processed}")
+            return result
+
         except Exception as e:
-            return {'success': False, 'error': str(e)}
+            error_msg = f"CSV読み込みエラー: {str(e)}"
+            print(error_msg)
+            return {'success': False, 'error': error_msg}
 
     def analyze_csv_structure(self):
         """CSV構造分析（既存メソッド）"""

@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% load static %}
+{% load image_filters %}
 
 {% block title %}{{ material.material_name }} - 原料詳細{% endblock %}
 
@@ -623,7 +624,7 @@
                 </div>
                 <div class="image-container">
                     {% if material.image_path and material.image_path != "" %}
-                        <img src="{{ material.image_path }}"
+                        <img src="/media/materials/images/{{ material.image_path|clean_path }}"
                              alt="{{ material.material_name }}"
                              class="material-image"
                              onerror="this.parentElement.innerHTML='<div class=&quot;image-placeholder&quot;><i class=&quot;fas fa-exclamation-triangle&quot;></i><p>画像を読み込めません</p></div>'">
@@ -726,6 +727,14 @@
                         <td>
                             {% if material.material_code %}
                                 <span class="monospace">{{ material.material_code }}</span>
+                            {% else %}―{% endif %}
+                        </td>
+                    </tr>
+                    <tr>
+                        <th><i class="fas fa-image"></i>画像パス</th>
+                        <td>
+                            {% if material.image_path %}
+                                <span class="monospace">{{ material.image_path }}</span>
                             {% else %}―{% endif %}
                         </td>
                     </tr>
